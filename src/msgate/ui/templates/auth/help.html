@@ -1,9 +1,20 @@
 {% extends "auth/layout.html" %}
 {% block content %}
 <h2 class="text-lg font-medium mb-4 text-center">Help</h2>
-<p class="text-slate-400 text-sm mb-6 text-center">
+<p class="text-slate-400 text-sm mb-4 text-center">
   Full documentation is hosted on GitHub Pages.
 </p>
+<div class="text-slate-500 text-xs mb-6 space-y-2 leading-relaxed">
+  <p>
+    <strong class="text-slate-400">EWS URL:</strong>
+    <code class="mono text-slate-400">https://&lt;exchange-host&gt;/EWS/Exchange.asmx</code>
+    — use your OWA / Client Access hostname (ask Exchange admin if unsure).
+  </p>
+  <p>
+    Configure Exchange under <strong class="text-slate-400">Settings</strong> after login.
+    Zabbix “Email from” must match the mailbox primary SMTP (or have Send As rights).
+  </p>
+</div>
 <a href="{{ help_url }}" target="_blank" rel="noopener"
    class="block w-full py-2 rounded bg-slate-800 hover:bg-slate-700 text-center font-medium">
   Open documentation ↗

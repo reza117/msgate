@@ -18,6 +18,11 @@ def _empty_str_to_none(value: object) -> object:
 class EWSConfig(BaseModel):
     server_url: HttpUrl = Field(
         ...,
+        description=(
+            "Exchange Web Services endpoint. Pattern: "
+            "https://<exchange-host>/EWS/Exchange.asmx "
+            "(same host as OWA/Client Access; ask your Exchange admin if unsure)."
+        ),
         examples=["https://mail.example.com/EWS/Exchange.asmx"],
     )
     auth_type: AuthType = Field(default=AuthType.NTLM, description="Authentication scheme")

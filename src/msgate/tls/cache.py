@@ -7,13 +7,17 @@ import threading
 from pathlib import Path
 
 from msgate.logging_setup import get_logger
+from msgate.paths import tls_cache_path
 from msgate.tls.profiles import TlsProfileId
 
 log = get_logger("tls.cache")
 
 _lock = threading.Lock()
 _memory: dict[str, str] = {}
-_DEFAULT_PATH = Path("data") / "tls_cache.json"
+
+
+def _default_path() -> Path:
+    return tls_cache_path()
 
 
 def cache_key(
@@ -34,7 +38,7 @@ def get_cached(key: str, path: Path | None = None) -> TlsProfileId | None:
     with _lock:
         if key in _memory:
             return TlsProfileId(_memory[key])
-        store = _load(path or _DEFAULT_PATH)
+        store = _load(path or _default_path())
         value = store.get(key)
         if value:
             _memory[key] = value
@@ -45,7 +49,7 @@ def get_cached(key: str, path: Path | None = None) -> TlsProfileId | None:
 def put_cached(key: str, profile_id: TlsProfileId, path: Path | None = None) -> None:
     with _lock:
         _memory[key] = profile_id.value
-        store_path = path or _DEFAULT_PATH
+        store_path = path or _default_path()
         store = _load(store_path)
         store[key] = profile_id.value
         _save(store_path, store)
@@ -55,7 +59,7 @@ def put_cached(key: str, profile_id: TlsProfileId, path: Path | None = None) -> 
 def invalidate(key: str, path: Path | None = None) -> None:
     with _lock:
         _memory.pop(key, None)
-        store_path = path or _DEFAULT_PATH
+        store_path = path or _default_path()
         store = _load(store_path)
         if key in store:
             del store[key]

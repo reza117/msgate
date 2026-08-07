@@ -8,10 +8,10 @@ from datetime import UTC, datetime, timedelta
 from pathlib import Path
 
 from msgate.logging_setup import get_logger
+from msgate.paths import log_dir
 
 log = get_logger("log_retention")
 
-DEFAULT_LOG_DIR = Path("data/logs")
 DEFAULT_RETENTION_DAYS = 14
 
 
@@ -23,12 +23,8 @@ def retention_days() -> int:
         return DEFAULT_RETENTION_DAYS
 
 
-def log_dir() -> Path:
-    return Path(os.environ.get("MSGATE_LOG_DIR", str(DEFAULT_LOG_DIR)))
-
-
 def setup_file_logging(level: str = "INFO") -> Path | None:
-    """Add rotating daily log file under data/logs. Returns log path if enabled."""
+    """Add daily log file under MSGATE_LOG_DIR or MSGATE_DATA_DIR/logs."""
     if os.environ.get("MSGATE_FILE_LOGGING", "true").lower() in {"0", "false", "no"}:
         return None
 

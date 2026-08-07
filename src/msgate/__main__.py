@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import argparse
+import os
 import signal
 import sys
 import threading
@@ -40,17 +41,19 @@ def _cmd_serve(args: argparse.Namespace) -> int:
     config = state.runtime.get()
 
     if config.ews is None:
-        log.error("MSGATE_EWS_URL is required to serve")
-        return 2
-
-    negotiated = prepare_ews_tls(config.ews)
-    log.info(
-        "TLS ready profile=%s host=%s:%s cached=%s",
-        negotiated.profile_id.value,
-        negotiated.host,
-        negotiated.port,
-        negotiated.from_cache,
-    )
+        log.warning(
+            "EWS not configured yet — API/UI will start; "
+            "set Exchange settings in the Web UI (Settings) or MSGATE_EWS_* env on first boot"
+        )
+    else:
+        negotiated = prepare_ews_tls(config.ews)
+        log.info(
+            "TLS ready profile=%s host=%s:%s cached=%s",
+            negotiated.profile_id.value,
+            negotiated.host,
+            negotiated.port,
+            negotiated.from_cache,
+        )
 
     state.worker.start()
     controller, _auth = create_controller(state.runtime, state.queue, events=state.events)
@@ -76,6 +79,12 @@ def _cmd_serve(args: argparse.Namespace) -> int:
         api_host,
         api_port,
     )
+
+    if config.ews is None:
+        print(
+            f"\n msgate: Exchange not configured — open http://{api_host}:{api_port}/ui/settings\n",
+            file=sys.stderr,
+        )
 
     if not admin_configured(state.session_factory):
         banner = (
@@ -159,8 +168,17 @@ def main(argv: list[str] | None = None) -> None:
         default="INFO",
         choices=["DEBUG", "INFO", "WARNING", "ERROR"],
     )
-    serve.add_argument("--api-host", default="127.0.0.1")
-    serve.add_argument("--api-port", type=int, default=8080)
+    serve.add_argument(
+        "--api-host",
+        default=os.environ.get("MSGATE_API_HOST", "127.0.0.1"),
+        help="API/UI bind address (env MSGATE_API_HOST; default 127.0.0.1)",
+    )
+    serve.add_argument(
+        "--api-port",
+        type=int,
+        default=int(os.environ.get("MSGATE_API_PORT", "8080")),
+        help="API/UI port (env MSGATE_API_PORT; default 8080)",
+    )
     serve.set_defaults(func=_cmd_serve)
 
     probe = sub.add_parser("tls-probe", help="Probe EWS TLS profiles (no mail send)")

@@ -8,11 +8,11 @@ from sqlalchemy import create_engine
 from sqlalchemy.engine import Engine
 from sqlalchemy.orm import Session, sessionmaker
 
-DEFAULT_DB_PATH = Path("data") / "msgate.db"
+from msgate.paths import db_path
 
 
-def make_engine(db_path: Path | str | None = None, *, echo: bool = False) -> Engine:
-    path = Path(db_path) if db_path else DEFAULT_DB_PATH
+def make_engine(db_path_arg: Path | str | None = None, *, echo: bool = False) -> Engine:
+    path = Path(db_path_arg) if db_path_arg else db_path()
     path.parent.mkdir(parents=True, exist_ok=True)
     url = f"sqlite:///{path.resolve()}"
     return create_engine(

@@ -48,6 +48,14 @@
     <section class="bg-slate-900 border border-slate-800 rounded-lg p-4 space-y-3"
              x-show="cfg.backend === 'ews'">
       <h2 class="text-sm font-medium text-slate-400">Exchange (EWS)</h2>
+      <p class="text-xs text-slate-500 leading-relaxed">
+        <strong class="text-slate-400">EWS URL</strong> pattern:
+        <code class="mono text-slate-400">https://&lt;exchange-host&gt;/EWS/Exchange.asmx</code>.
+        Use your OWA / Client Access hostname (ask Exchange admin for the EWS endpoint if unsure).
+        Username: <code class="mono text-slate-400">DOMAIN\user</code> or UPN.
+        <strong class="text-slate-400">Primary SMTP</strong> must be the mailbox that account may send as
+        (Zabbix “Email from” must match).
+      </p>
       <label class="block text-sm">
         <span class="text-slate-400">EWS URL <span class="text-red-400">*</span></span>
         <input x-model="ews.server_url" type="url" :disabled="!editing"

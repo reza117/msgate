@@ -32,8 +32,16 @@ def put_config(
     update: GatewayConfig,
     state: AppState = Depends(get_state),
 ) -> GatewayConfig:
+    from msgate.tls.negotiate import prepare_ews_tls
+
     current = state.runtime.get()
     merged = merge_config_update(current, update)
+    if merged.ews is not None:
+        try:
+            prepare_ews_tls(merged.ews)
+        except Exception:
+            # Keep config; /readyz and Tools health will surface TLS errors.
+            pass
     state.runtime.replace(merged)
     with state.session_factory() as session:
         save_config(session, merged, state.secret_box)

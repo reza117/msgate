@@ -11,9 +11,9 @@ from pathlib import Path
 from cryptography.hazmat.primitives.ciphers.aead import AESGCM
 
 from msgate.logging_setup import get_logger
+from msgate.paths import secret_key_path
 
 log = get_logger("crypto")
-_DEFAULT_KEY_PATH = Path("data") / ".secret_key"
 
 
 class SecretBox:
@@ -56,7 +56,7 @@ def resolve_secret_box(
     if env_key:
         return SecretBox.from_passphrase(env_key)
 
-    path = key_path or _DEFAULT_KEY_PATH
+    path = key_path or secret_key_path()
     if path.is_file():
         phrase = path.read_text(encoding="utf-8").strip()
         return SecretBox.from_passphrase(phrase)
