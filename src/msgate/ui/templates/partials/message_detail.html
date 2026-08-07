@@ -1,0 +1,13 @@
+<div class="bg-slate-900 border border-slate-800 rounded-lg p-4">
+  <h3 class="font-medium mb-2">{{ msg.id }}</h3>
+  <dl class="grid grid-cols-2 gap-2 text-sm mb-4">
+    <dt class="text-slate-400">Status</dt><dd>{{ msg.status }}</dd>
+    <dt class="text-slate-400">From</dt><dd>{{ msg.sender }}</dd>
+    <dt class="text-slate-400">Auth raw</dt><dd class="mono">{{ msg.raw_auth_user }}</dd>
+    <dt class="text-slate-400">Sanitized</dt><dd class="mono">{{ msg.sanitized_user }}</dd>
+    <dt class="text-slate-400">Attempts</dt><dd>{{ msg.attempts }}</dd>
+    <dt class="text-slate-400">Last error</dt><dd class="text-red-400">{{ msg.last_error or '—' }}</dd>
+  </dl>
+  <h4 class="text-xs text-slate-400 mb-1">MIME preview</h4>
+  <pre class="mono text-xs bg-slate-950 p-3 rounded overflow-x-auto">{{ msg.mime_preview }}</pre>
+</div>

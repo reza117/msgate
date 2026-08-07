@@ -1,0 +1,22 @@
+<table class="w-full text-sm">
+  <thead class="text-slate-400 text-left">
+    <tr><th class="pb-2">ID</th><th>From</th><th>Subject</th><th>Status</th><th></th></tr>
+  </thead>
+  <tbody>
+    {% for r in rows %}
+    <tr class="border-t border-slate-800">
+      <td class="py-2 mono text-xs">{{ r.id }}</td>
+      <td>{{ r.sender }}</td>
+      <td>{{ r.subject }}</td>
+      <td><span class="px-2 py-0.5 rounded bg-slate-800 text-xs">{{ r.status }}</span></td>
+      <td>
+        <button class="text-blue-400 hover:underline"
+                hx-get="/api/v1/ui/messages/{{ r.id }}"
+                hx-target="#inspector" hx-swap="innerHTML">Inspect</button>
+      </td>
+    </tr>
+    {% else %}
+    <tr><td colspan="5" class="py-4 text-slate-500">No messages yet.</td></tr>
+    {% endfor %}
+  </tbody>
+</table>

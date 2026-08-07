@@ -513,3 +513,50 @@ paths:
 ###########################################################
 ######################## **Section 4** ###################
 ##########################################################
+## Short Answer
+
+**Yes, it can easily work with Gmail and any standard mail service.**
+
+While our initial design was tailored to solve the **Exchange (EWS) / Microsoft 365 (Graph API)** authentication problem, the core architecture is designed as a **Universal Protocol Gateway**.
+
+---
+
+## How It Works with Gmail & Other Mail Services
+
+By adding different **Backend Drivers** to our Python application, the gateway can translate incoming local SMTP traffic into whichever protocol or provider you use on the backend:
+
+```
+                          +-----------------------+ ---> [ Driver 1 ] ---> Exchange EWS
+                          |                       |
+[ Local Apps / Devices ]  |   ExBridge Gateway    | ---> [ Driver 2 ] ---> Microsoft Graph API
+(Standard SMTP) --------> | (aiosmtpd + Web API)  |
+                          |                       | ---> [ Driver 3 ] ---> Gmail API (Google OAuth2)
+                          +-----------------------+ ---> [ Driver 4 ] ---> Standard Upstream SMTP
+                                                                           (smtp.gmail.com / SendGrid)
+
+```
+
+### 1. Standard Upstream SMTP Driver (Gmail / SendGrid / Postfix)
+
+* **How it works:** Accepts incoming unauthenticated or basic SMTP on port `1025` from local devices, then forwards the mail directly to `smtp.gmail.com:587` (using TLS and a Gmail **App Password**) or any corporate Postfix/SMTP relay.
+* **Best for:** Standard Gmail accounts or standard email services.
+
+### 2. Gmail API / Google Workspace Driver
+
+* **How it works:** Translates standard local SMTP into Google's modern **Gmail REST API** using **OAuth2 Client Credentials** or **Service Accounts**.
+* **Best for:** Google Workspace enterprise environments that have disabled legacy password/SMTP authentication completely and require OAuth2 tokens.
+
+---
+
+## Why This Makes the Gateway Much Stronger
+
+Expanding the backend drivers turns the app from an Exchange-only tool into a **Universal Outbound Relay** for your entire infrastructure:
+
+1. **Single Point of Configuration:** All your internal servers, Zabbix instances, printers, and custom scripts point to `127.0.0.1:1025`.
+2. **Provider Agnostic:** If you switch a domain from Exchange to Google Workspace (or vice versa), you only update the gateway config. Your internal apps and scripts don't need to be modified.
+3. **Open-Source Appeal:** It dramatically broadens your GitHub audience—anyone looking for an SMTP-to-Gmail API or SMTP-to-Graph bridge can use your project.
+
+---
+
+[Send Emails via Gmail API using Service Accounts in Python](https://www.youtube.com/watch?v=SpmWlHRVn9c)
+This video demonstrates how to authenticate and dispatch emails through Google's REST API using Python service accounts, showing how simple it is to integrate a Google driver alongside our Exchange backend.

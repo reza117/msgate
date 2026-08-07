@@ -1,0 +1,48 @@
+{% extends "base.html" %}
+{% block content %}
+<div id="stats-cards" hx-get="/ui/partials/stats" hx-trigger="load, every 10s" hx-swap="innerHTML">
+  {% include "partials/stats_cards.html" %}
+</div>
+
+<div class="mt-6 grid grid-cols-1 xl:grid-cols-2 gap-6">
+  <section class="bg-slate-900 border border-slate-800 rounded-lg p-4">
+    <h2 class="text-sm font-medium text-slate-400 mb-3">Live Traffic</h2>
+    <div id="traffic" class="h-80 overflow-y-auto space-y-2 mono text-xs"></div>
+  </section>
+  <section class="bg-slate-900 border border-slate-800 rounded-lg p-4">
+    <h2 class="text-sm font-medium text-slate-400 mb-3">Quick Actions</h2>
+    <div class="space-y-3 text-sm">
+      <a href="/ui/tools" class="block px-4 py-3 rounded bg-slate-800 hover:bg-slate-700">Send test email</a>
+      <a href="/ui/tools#auth" class="block px-4 py-3 rounded bg-slate-800 hover:bg-slate-700">Auth simulator</a>
+      <button hx-post="/api/v1/tools/ews-health" hx-swap="none"
+              onclick="alert('Check live traffic panel for EWS health result')"
+              class="w-full text-left px-4 py-3 rounded bg-slate-800 hover:bg-slate-700">
+        Check Exchange health
+      </button>
+    </div>
+  </section>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+(function () {
+  const el = document.getElementById('traffic');
+  const ws = new WebSocket(`ws://${location.host}/api/v1/ws/traffic`);
+  function line(ev) {
+    const d = document.createElement('div');
+    let cls = 'traffic-line kind-smtp';
+    if (ev.kind.startsWith('auth')) cls = ev.kind.includes('fail') ? 'kind-fail' : 'kind-auth';
+    if (ev.kind.startsWith('ews')) cls = 'kind-ews';
+    if (ev.kind.startsWith('queue')) cls = 'kind-queue';
+    d.className = cls + ' py-1';
+    d.textContent = `[${ev.ts}] ${ev.kind}: ${ev.message}`;
+    el.prepend(d);
+    while (el.childNodes.length > 100) el.removeChild(el.lastChild);
+  }
+  ws.onmessage = (m) => {
+    try { line(JSON.parse(m.data)); } catch (_) {}
+  };
+})();
+</script>
+{% endblock %}

@@ -1,0 +1,15 @@
+services:
+  msgate:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile
+    container_name: msgate
+    restart: unless-stopped
+    ports:
+      - "1025:1025"
+      - "8080:8080"
+    volumes:
+      - ../data:/app/data
+    environment:
+      - MSGATE_SMTP_BIND=0.0.0.0
+      - MSGATE_SMTP_PORT=1025

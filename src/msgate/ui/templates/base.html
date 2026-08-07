@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html lang="en" class="h-full bg-slate-950 text-slate-100">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>msgate — {{ page }}</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://unpkg.com/htmx.org@2.0.4"></script>
+  <script defer src="https://unpkg.com/alpinejs@3.14.1/dist/cdn.min.js"></script>
+  <style>
+    .mono { font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace; }
+    .traffic-line { border-left: 3px solid rgb(51 65 85); padding-left: .75rem; }
+    .kind-auth { border-color: rgb(59 130 246); }
+    .kind-smtp { border-color: rgb(16 185 129); }
+    .kind-ews { border-color: rgb(168 85 247); }
+    .kind-queue { border-color: rgb(245 158 11); }
+    .kind-fail { border-color: rgb(239 68 68); }
+  </style>
+</head>
+<body class="h-full" x-data="{ sidebar: true }">
+  {% if must_change_password %}
+  <div class="bg-red-900/80 border-b border-red-700 px-6 py-2 text-sm text-red-100 text-center">
+    Temporary password in use —
+    <a href="/ui/change-password" class="underline font-medium">change it now</a>
+  </div>
+  {% endif %}
+  <div class="flex h-full">
+    <aside class="w-56 bg-slate-900 border-r border-slate-800 p-4 flex flex-col gap-2">
+      <div class="text-lg font-semibold mb-4">msgate <span class="text-xs text-slate-400">v{{ version }}</span></div>
+      <a href="/" class="px-3 py-2 rounded {% if page=='Overview' %}bg-slate-800{% else %}hover:bg-slate-800{% endif %}">Overview</a>
+      <a href="/ui/messages" class="px-3 py-2 rounded {% if page=='Messages' %}bg-slate-800{% else %}hover:bg-slate-800{% endif %}">Messages</a>
+      <a href="/ui/tools" class="px-3 py-2 rounded {% if page=='Tools' %}bg-slate-800{% else %}hover:bg-slate-800{% endif %}">Tools</a>
+      <a href="{{ help_url }}" target="_blank" rel="noopener" class="px-3 py-2 rounded hover:bg-slate-800 text-slate-400">Help ↗</a>
+      <a href="/docs" target="_blank" class="px-3 py-2 rounded hover:bg-slate-800 text-slate-400">API Docs ↗</a>
+      <form method="post" action="/ui/auth/logout" class="mt-auto pt-4 border-t border-slate-800">
+        <button type="submit" class="w-full px-3 py-2 rounded hover:bg-slate-800 text-slate-400 text-left text-sm">
+          Sign out
+        </button>
+      </form>
+    </aside>
+    <main class="flex-1 flex flex-col min-w-0">
+      <header class="border-b border-slate-800 px-6 py-3 flex items-center gap-4 text-sm">
+        <span class="px-2 py-1 rounded bg-emerald-900/50 text-emerald-300">EWS: {% if ews_ok %}Connected{% else %}Down{% endif %}</span>
+        <span class="px-2 py-1 rounded bg-slate-800">SMTP: {{ smtp_port }}</span>
+        <span class="px-2 py-1 rounded bg-slate-800">Queue: {{ stats.queue_pending }}</span>
+      </header>
+      <div class="flex-1 overflow-auto p-6">
+        {% block content %}{% endblock %}
+      </div>
+    </main>
+  </div>
+  {% block scripts %}{% endblock %}
+</body>
+</html>
