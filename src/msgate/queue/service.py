@@ -12,7 +12,7 @@ from msgate.crypto.secrets import SecretBox
 from msgate.events import EventHub
 from msgate.logging_setup import get_logger
 from msgate.queue import repository as repo
-from msgate.queue.processor import SendFn, process_row
+from msgate.queue.processor import LegacySendFn, process_row
 from msgate.schemas.messages import MessageRecord
 
 log = get_logger("queue.service")
@@ -32,7 +32,7 @@ class QueueService:
         runtime: RuntimeConfig,
         box: SecretBox,
         *,
-        send_fn: SendFn | None = None,
+        send_fn: LegacySendFn | None = None,
         events: EventHub | None = None,
     ) -> None:
         self._session_factory = session_factory

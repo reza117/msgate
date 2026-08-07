@@ -16,6 +16,7 @@ from msgate.app.bootstrap import admin_configured, build_app_state
 from msgate.cli.admin import cmd_reset_password
 from msgate.config_load import load_config_from_env
 from msgate.logging_setup import get_logger, setup_logging
+from msgate.observability.log_retention import purge_old_logs, setup_file_logging
 from msgate.smtp.server import create_controller
 from msgate.tls.negotiate import endpoint_from_url, prepare_ews_tls
 from msgate.tls.probe import probe_profile
@@ -29,7 +30,11 @@ def _run_api(app_state, host: str, port: int) -> None:
 
 def _cmd_serve(args: argparse.Namespace) -> int:
     setup_logging(args.log_level)
+    log_path = setup_file_logging(args.log_level)
     log = get_logger("cli")
+    purge_old_logs()
+    if log_path:
+        log.info("file logging enabled path=%s", log_path)
 
     state = build_app_state()
     config = state.runtime.get()

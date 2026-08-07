@@ -6,8 +6,8 @@ from fastapi import APIRouter, Depends, Response
 
 from msgate.api.deps import get_state
 from msgate.app.state import AppState
+from msgate.drivers.registry import backend_label, check_backend_health
 from msgate.schemas.health import HealthStatus
-from msgate.tls.negotiate import negotiate
 
 router = APIRouter(tags=["health"])
 
@@ -26,32 +26,24 @@ def readyz(
 ) -> HealthStatus:
     cfg = state.runtime.get()
     smtp_ok = state.smtp_ok()
-    exchange_ok = False
-    latency = 0.0
     pending = 0
 
     with state.session_factory() as session:
         pending = state.queue.pending_count(session)
 
-    if cfg.ews is not None:
-        try:
-            import time
+    health = check_backend_health(cfg)
+    healthy = smtp_ok and health.ok
 
-            t0 = time.perf_counter()
-            negotiate(cfg.ews)
-            latency = (time.perf_counter() - t0) * 1000
-            exchange_ok = True
-        except Exception:
-            exchange_ok = False
-
-    healthy = smtp_ok and exchange_ok
     if not healthy:
         response.status_code = 503
 
     return HealthStatus(
         status="healthy" if healthy else "degraded",
         smtp_server=smtp_ok,
-        exchange_backend=exchange_ok,
-        backend_latency_ms=latency,
+        exchange_backend=health.ok,
+        backend=health.driver or backend_label(cfg),
+        backend_ok=health.ok,
+        backend_latency_ms=health.latency_ms,
         queue_pending=pending,
+        backend_detail=health.detail or health.error,
     )

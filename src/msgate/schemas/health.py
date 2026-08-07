@@ -8,8 +8,14 @@ from pydantic import BaseModel, Field
 class HealthStatus(BaseModel):
     status: str = Field(..., examples=["healthy"])
     smtp_server: bool = True
-    exchange_backend: bool = True
+    exchange_backend: bool = Field(
+        True,
+        description="Legacy alias; true when active mail backend is healthy",
+    )
+    backend: str = Field(default="ews", examples=["ews"])
+    backend_ok: bool = True
     backend_latency_ms: float = Field(..., examples=[42.5])
+    backend_detail: str | None = None
     queue_pending: int = 0
 
 

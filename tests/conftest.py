@@ -13,6 +13,8 @@ from msgate.config.runtime import RuntimeConfig
 from msgate.crypto.secrets import SecretBox
 from msgate.db.models import AdminUserRow, Base, MessageRow, SettingRow  # noqa: F401
 from msgate.events import EventHub
+from msgate.observability.metrics import MetricsRegistry
+from msgate.observability.webhooks import WebhookNotifier
 from msgate.queue.service import QueueService
 from msgate.queue.worker import QueueWorker
 from msgate.schemas.config import EWSConfig, GatewayConfig, SMTPConfig
@@ -41,7 +43,9 @@ def make_test_state(*, with_ews: bool = True) -> AppState:
     cfg = GatewayConfig(smtp=SMTPConfig(), ews=ews)
     runtime = RuntimeConfig(cfg)
     box = SecretBox.from_passphrase("test-secret-key-123456789012345")
-    events = EventHub()
+    metrics = MetricsRegistry()
+    webhooks = WebhookNotifier()
+    events = EventHub(metrics=metrics, webhooks=webhooks)
     queue = QueueService(sf, runtime, box, events=events)
     worker = QueueWorker(sf, runtime, box, events=events)
     return AppState(
@@ -51,6 +55,8 @@ def make_test_state(*, with_ews: bool = True) -> AppState:
         queue=queue,
         worker=worker,
         events=events,
+        metrics=metrics,
+        webhooks=webhooks,
         smtp_running=True,
         smtp_controller=object(),
     )
@@ -60,9 +66,21 @@ def make_test_client(*, authenticated: bool = False) -> TestClient:
     state = make_test_state()
     client = TestClient(create_app(state))
     if authenticated:
-        client.post(
-            "/ui/auth/setup",
-            data={"password": "testpass12", "password_confirm": "testpass12"},
-            follow_redirects=False,
-        )
+        _ensure_logged_in(client)
     return client
+
+
+def _ensure_logged_in(client: TestClient, password: str = "testpass12") -> None:
+    from msgate.auth.admin import admin_exists, create_admin
+
+    state = client.app.state.msgate
+    with state.session_factory() as session:
+        if not admin_exists(session):
+            create_admin(session, password, must_change_password=False)
+    resp = client.post(
+        "/ui/auth/login",
+        data={"password": password},
+        follow_redirects=False,
+    )
+    assert resp.status_code == 303, resp.text
+    assert client.get("/api/v1/config").status_code == 200

@@ -6,6 +6,7 @@ from enum import StrEnum
 class BackendType(StrEnum):
     EWS = "ews"
     GRAPH = "graph"
+    GMAIL = "gmail"
 
 
 class AuthType(StrEnum):

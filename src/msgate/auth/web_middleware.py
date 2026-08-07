@@ -9,7 +9,7 @@ from starlette.responses import JSONResponse, RedirectResponse, Response
 from msgate.auth.admin import ADMIN_USERNAME, admin_exists
 from msgate.auth.session import COOKIE_NAME, MAX_AGE, decode_session, encode_session, session_key
 
-PUBLIC_PATHS = frozenset({"/healthz", "/readyz"})
+PUBLIC_PATHS = frozenset({"/healthz", "/readyz", "/metrics"})
 SETUP_PATH = "/ui/setup"
 LOGIN_PATH = "/ui/login"
 CHANGE_PATH = "/ui/change-password"

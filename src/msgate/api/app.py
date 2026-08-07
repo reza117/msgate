@@ -8,8 +8,10 @@ from msgate import __version__
 from msgate.api.routes import (
     auth_ui,
     config,
+    ha,
     health,
     messages,
+    metrics,
     queue,
     stats,
     tools,
@@ -34,6 +36,8 @@ def create_app(state: AppState) -> FastAPI:
     app.include_router(ui.router)
     app.include_router(ui_messages.router)
     app.include_router(health.router)
+    app.include_router(metrics.router)
+    app.include_router(ha.router)
     app.include_router(stats.router)
     app.include_router(config.router)
     app.include_router(queue.router)

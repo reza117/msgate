@@ -1,11 +1,14 @@
-"""Tools API: auth simulator, EWS health."""
+"""Tools API: auth simulator, backend health."""
 
 from __future__ import annotations
 
 from fastapi import APIRouter, Depends, Form, HTTPException
 
+from msgate.api.backend import require_backend_credentials
 from msgate.api.deps import get_state
 from msgate.app.state import AppState
+from msgate.drivers.base import HealthResult
+from msgate.drivers.registry import backend_label, check_backend_health
 from msgate.tools.diagnostics import (
     AuthSimRequest,
     AuthSimResult,
@@ -36,8 +39,21 @@ def auth_simulate(
     return result
 
 
+@router.get("/backend-health", response_model=HealthResult)
+def backend_health(state: AppState = Depends(get_state)) -> HealthResult:
+    cfg = state.runtime.get()
+    result = check_backend_health(cfg)
+    state.events.publish_sync(
+        "backend.health",
+        f"{backend_label(cfg)} health {'ok' if result.ok else 'fail'}",
+        detail=result.detail or result.error,
+    )
+    return result
+
+
 @router.post("/ews-health", response_model=EwsHealthResult)
 def ews_health(state: AppState = Depends(get_state)) -> EwsHealthResult:
+    """Legacy alias for EWS-only health check."""
     cfg = state.runtime.get()
     ews = cfg.ews
     if ews is None or not ews.username or not ews.password:
@@ -59,10 +75,7 @@ def send_test_ui(
     body: str = Form(...),
     state: AppState = Depends(get_state),
 ) -> dict[str, str]:
-    cfg = state.runtime.get()
-    ews = cfg.ews
-    if ews is None or not ews.username or not ews.password:
-        raise HTTPException(status_code=400, detail="EWS credentials required")
+    username, password = require_backend_credentials(state)
     rcpts = [r.strip() for r in recipients.split(",") if r.strip()]
     result = state.queue.submit_test(
         sender=sender,
@@ -70,8 +83,8 @@ def send_test_ui(
         subject=subject,
         body=body,
         is_html=False,
-        ews_username=ews.username,
-        password=ews.password,
+        ews_username=username,
+        password=password,
     )
     state.events.publish_sync("test.send", f"Test email queued {result.message_id}")
     return {"message_id": result.message_id, "status": result.status}

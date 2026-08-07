@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-from dataclasses import dataclass
 from email import message_from_bytes
 from email.message import Message as EmailMessage
 from email.utils import parseaddr
@@ -19,6 +18,7 @@ from exchangelib import (
     Message,
 )
 
+from msgate.drivers.base import SendResult
 from msgate.ews.mailbox import resolve_primary_smtp
 from msgate.logging_setup import get_logger
 from msgate.schemas.config import EWSConfig
@@ -26,12 +26,6 @@ from msgate.schemas.enums import AuthType
 from msgate.tls import invalidate_ews_tls, is_tls_failure, prepare_ews_tls
 
 log = get_logger("ews")
-
-
-@dataclass(slots=True)
-class SendResult:
-    message_id: str | None
-    changekey: str | None
 
 
 def _auth_type(cfg: EWSConfig) -> str:

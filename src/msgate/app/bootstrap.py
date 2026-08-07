@@ -14,6 +14,8 @@ from msgate.config.runtime import RuntimeConfig
 from msgate.crypto.secrets import resolve_secret_box
 from msgate.db.session import make_engine, make_session_factory
 from msgate.events import EventHub
+from msgate.observability.metrics import MetricsRegistry
+from msgate.observability.webhooks import WebhookNotifier
 from msgate.queue.service import QueueService
 from msgate.queue.worker import QueueWorker
 
@@ -33,20 +35,26 @@ def build_app_state(*, send_fn=None) -> AppState:
     config = bootstrap_config(session_factory, box)
 
     runtime = RuntimeConfig(config)
-    events = EventHub()
+    metrics = MetricsRegistry()
+    webhooks = WebhookNotifier()
+    events = EventHub(metrics=metrics, webhooks=webhooks)
     queue = QueueService(session_factory, runtime, box, send_fn=send_fn, events=events)
     worker = QueueWorker(session_factory, runtime, box, send_fn=send_fn, events=events)
 
-    ensure_admin_bootstrap(session_factory)
+    bootstrap_admin_from_env(session_factory)
 
-    return AppState(
+    state = AppState(
         runtime=runtime,
         secret_box=box,
         session_factory=session_factory,
         queue=queue,
         worker=worker,
         events=events,
+        metrics=metrics,
+        webhooks=webhooks,
     )
+    state.refresh_metrics()
+    return state
 
 
 def ensure_admin_bootstrap(session_factory) -> bool:

@@ -1,5 +1,6 @@
 """EWS package exports."""
 
-from msgate.ews.client import SendResult, send_mime
+from msgate.drivers.base import SendResult
+from msgate.ews.client import send_mime
 
 __all__ = ["SendResult", "send_mime"]

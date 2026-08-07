@@ -19,6 +19,8 @@ class DashboardStats(BaseModel):
     auth_errors_24h: int = 0
     backend_latency_ms: float = 0.0
     smtp_port: int = 1025
+    backend_name: str = "EWS"
+    backend_connected: bool = False
     ews_connected: bool = False
 
 
@@ -29,7 +31,8 @@ def compute_stats(
     auth_errors: int,
     backend_latency_ms: float,
     smtp_port: int,
-    ews_connected: bool,
+    backend_name: str,
+    backend_connected: bool,
 ) -> DashboardStats:
     today_start = datetime.now(UTC).replace(hour=0, minute=0, second=0, microsecond=0)
     day_ago = datetime.now(UTC) - timedelta(hours=24)
@@ -57,5 +60,7 @@ def compute_stats(
         auth_errors_24h=auth_errors,
         backend_latency_ms=backend_latency_ms,
         smtp_port=smtp_port,
-        ews_connected=ews_connected,
+        backend_name=backend_name,
+        backend_connected=backend_connected,
+        ews_connected=backend_connected,
     )

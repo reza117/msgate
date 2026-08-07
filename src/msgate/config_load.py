@@ -48,9 +48,26 @@ def load_config_from_env() -> GatewayConfig:
             primary_smtp=_env("MSGATE_EWS_PRIMARY_SMTP"),
         )
 
+    failover_url = _env("MSGATE_EWS_FAILOVER_URL")
+    ews_failover: EWSConfig | None = None
+    if failover_url:
+        ews_failover = EWSConfig(
+            server_url=failover_url,
+            auth_type=ews.auth_type if ews else AuthType.NTLM,
+            domain=_env("MSGATE_EWS_FAILOVER_DOMAIN") or (ews.domain if ews else None),
+            username=_env("MSGATE_EWS_FAILOVER_USERNAME") or (ews.username if ews else None),
+            password=_env("MSGATE_EWS_FAILOVER_PASSWORD") or (ews.password if ews else None),
+            trust_self_signed=trust if ews else False,
+            ca_file=_env("MSGATE_EWS_FAILOVER_CA_FILE") or (ews.ca_file if ews else None),
+            tls_mode=tls_mode if ews else "auto",
+            primary_smtp=_env("MSGATE_EWS_FAILOVER_PRIMARY_SMTP")
+            or (ews.primary_smtp if ews else None),
+        )
+
     return GatewayConfig(
         backend=BackendType.EWS,
         smtp=smtp,
         ews=ews,
+        ews_failover=ews_failover,
         default_sender=_env("MSGATE_DEFAULT_SENDER"),
     )

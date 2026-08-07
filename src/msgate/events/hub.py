@@ -7,7 +7,11 @@ import json
 from collections import deque
 from dataclasses import dataclass, field
 from datetime import UTC, datetime
-from typing import Any
+from typing import TYPE_CHECKING, Any
+
+if TYPE_CHECKING:
+    from msgate.observability.metrics import MetricsRegistry
+    from msgate.observability.webhooks import WebhookNotifier
 
 
 @dataclass(slots=True)
@@ -31,17 +35,29 @@ class TrafficEvent:
 class EventHub:
     """Thread-safe fan-out of traffic events to WebSocket subscribers."""
 
-    def __init__(self, *, history_size: int = 200) -> None:
+    def __init__(
+        self,
+        *,
+        history_size: int = 200,
+        metrics: MetricsRegistry | None = None,
+        webhooks: WebhookNotifier | None = None,
+    ) -> None:
         self._history: deque[TrafficEvent] = deque(maxlen=history_size)
         self._subscribers: set[asyncio.Queue[str]] = set()
         self._lock = asyncio.Lock()
-        self.auth_errors_24h = 0  # simplified counter; reset on restart
+        self.auth_errors_24h = 0
+        self._metrics = metrics
+        self._webhooks = webhooks
 
     def publish_sync(self, kind: str, message: str, **data: Any) -> None:
         event = TrafficEvent(kind=kind, message=message, data=data)
         self._history.append(event)
         if kind == "auth.fail":
             self.auth_errors_24h += 1
+        if self._metrics:
+            self._metrics.on_event(kind)
+        if self._webhooks:
+            self._webhooks.on_event(kind, message, data)
         payload = event.to_json()
         dead: list[asyncio.Queue[str]] = []
         for q in list(self._subscribers):

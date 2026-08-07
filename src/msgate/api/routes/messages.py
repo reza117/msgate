@@ -2,8 +2,9 @@
 
 from __future__ import annotations
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends
 
+from msgate.api.backend import require_backend_credentials
 from msgate.api.deps import get_state
 from msgate.app.state import AppState
 from msgate.schemas.messages import EmailMessageRequest
@@ -16,21 +17,14 @@ def send_test_email(
     body: EmailMessageRequest,
     state: AppState = Depends(get_state),
 ) -> dict[str, str]:
-    cfg = state.runtime.get()
-    ews = cfg.ews
-    if ews is None or not ews.username or not ews.password:
-        raise HTTPException(
-            status_code=400,
-            detail="EWS username/password required in config for API test send",
-        )
-
+    username, password = require_backend_credentials(state)
     result = state.queue.submit_test(
         sender=str(body.sender),
         recipients=[str(r) for r in body.recipients],
         subject=body.subject,
         body=body.body,
         is_html=body.is_html,
-        ews_username=ews.username,
-        password=ews.password,
+        ews_username=username,
+        password=password,
     )
     return {"message_id": result.message_id, "status": result.status}

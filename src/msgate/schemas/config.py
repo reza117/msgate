@@ -54,6 +54,10 @@ class GatewayConfig(BaseModel):
     backend: BackendType = Field(default=BackendType.EWS)
     smtp: SMTPConfig = Field(default_factory=SMTPConfig)
     ews: EWSConfig | None = None
+    ews_failover: EWSConfig | None = Field(
+        default=None,
+        description="Secondary Exchange endpoint when primary send fails",
+    )
     graph: GraphConfig | None = None
     default_sender: EmailStr | None = Field(default=None, examples=["gateway@domain.com"])
 

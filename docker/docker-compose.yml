@@ -3,13 +3,26 @@ services:
     build:
       context: ..
       dockerfile: docker/Dockerfile
+    image: msgate:local
     container_name: msgate
     restart: unless-stopped
     ports:
       - "1025:1025"
       - "8080:8080"
     volumes:
-      - ../data:/app/data
+      - msgate-data:/app/data
     environment:
-      - MSGATE_SMTP_BIND=0.0.0.0
-      - MSGATE_SMTP_PORT=1025
+      MSGATE_SMTP_BIND: "0.0.0.0"
+      MSGATE_SMTP_PORT: "1025"
+      MSGATE_EWS_URL: "${MSGATE_EWS_URL:-}"
+      MSGATE_EWS_USERNAME: "${MSGATE_EWS_USERNAME:-}"
+      MSGATE_EWS_PASSWORD: "${MSGATE_EWS_PASSWORD:-}"
+      MSGATE_EWS_DOMAIN: "${MSGATE_EWS_DOMAIN:-}"
+      MSGATE_EWS_TLS_MODE: "${MSGATE_EWS_TLS_MODE:-auto}"
+      MSGATE_EWS_TRUST_SELF_SIGNED: "${MSGATE_EWS_TRUST_SELF_SIGNED:-false}"
+      MSGATE_LOG_RETENTION_DAYS: "${MSGATE_LOG_RETENTION_DAYS:-14}"
+      MSGATE_WEBHOOK_URLS: "${MSGATE_WEBHOOK_URLS:-}"
+      MSGATE_HELP_URL: "${MSGATE_HELP_URL:-https://msgate.github.io/msgate/}"
+
+volumes:
+  msgate-data:
