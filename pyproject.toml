@@ -40,8 +40,9 @@ packages = ["src/msgate"]
 [tool.hatch.build.targets.wheel.sources]
 "src/msgate" = "msgate"
 
-[tool.hatch.build.targets.wheel.force-include]
-"src/msgate/ui/templates" = "msgate/ui/templates"
+# HTML templates ship with the package tree (do NOT also force-include —
+# that duplicates paths and fails newer hatchling with:
+# "A second file is being added to the wheel ... account.html").
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

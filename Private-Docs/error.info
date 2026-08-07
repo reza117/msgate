@@ -1,6 +1,60 @@
+sudo ./install.sh
+[sudo] password for zabbix: 
+==> Installing msgate to /opt/msgate
+Requirement already satisfied: pip in ./.venv/lib/python3.12/site-packages (24.0)
+Collecting pip
+  Downloading pip-26.2.1-py3-none-any.whl.metadata (4.6 kB)
+Downloading pip-26.2.1-py3-none-any.whl (1.8 MB)
+   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 1.8/1.8 MB 19.0 MB/s eta 0:00:00
+Installing collected packages: pip
+  Attempting uninstall: pip
+    Found existing installation: pip 24.0
+    Uninstalling pip-24.0:
+      Successfully uninstalled pip-24.0
+Successfully installed pip-26.2.1
+Processing ./.
+  Installing build dependencies ... done
+  Getting requirements to build wheel ... done
+  Preparing metadata (pyproject.toml) ... error
+  error: subprocess-exited-with-error
+  
+  × Preparing metadata (pyproject.toml) did not run successfully.
+  │ exit code: 1
+  ╰─> [28 lines of output]
+      Traceback (most recent call last):
+        File "/opt/msgate/.venv/lib/python3.12/site-packages/pip/_vendor/pyproject_hooks/_in_process/_in_process.py", line 389, in <module>
+          main()
+        File "/opt/msgate/.venv/lib/python3.12/site-packages/pip/_vendor/pyproject_hooks/_in_process/_in_process.py", line 373, in main
+          json_out["return_val"] = hook(**hook_input["kwargs"])
+                                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+        File "/opt/msgate/.venv/lib/python3.12/site-packages/pip/_vendor/pyproject_hooks/_in_process/_in_process.py", line 178, in prepare_metadata_for_build_wheel
+          whl_basename = backend.build_wheel(metadata_directory, config_settings)
+                         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+        File "/tmp/pip-build-env-uqkfiupj/overlay/lib/python3.12/site-packages/hatchling/build.py", line 58, in build_wheel
+          return os.path.basename(next(builder.build(directory=wheel_directory, versions=["standard"])))
+                                  ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+        File "/tmp/pip-build-env-uqkfiupj/overlay/lib/python3.12/site-packages/hatchling/builders/plugin/interface.py", line 157, in build
+          artifact = version_api[version](directory, **build_data)
+                     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+        File "/tmp/pip-build-env-uqkfiupj/overlay/lib/python3.12/site-packages/hatchling/builders/wheel.py", line 529, in build_standard
+          record = archive.add_file(included_file)
+                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+        File "/tmp/pip-build-env-uqkfiupj/overlay/lib/python3.12/site-packages/hatchling/builders/wheel.py", line 135, in add_file
+          with open(included_file.path, "rb") as in_file, self.zf.open(zip_info, "w") as out_file:
+                                                          ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+        File "/tmp/pip-build-env-uqkfiupj/overlay/lib/python3.12/site-packages/hatchling/builders/wheel.py", line 82, in open
+          raise ValueError(message)
+      ValueError: A second file is being added to the wheel archive at the same path: `msgate/ui/templates/account.html`.
+      
+      The most likely cause of this is an entry in the `tool.hatch.build.targets.wheel.force-include` table. See: https://hatch.pypa.io/1.8/config/build/#forced-inclusion
+      
+      
+      [end of output]
+  
+  note: This error originates from a subprocess, and is likely not a problem with pip.
+error: metadata-generation-failed
 
-#############################
-Setting page 
-save button  is not properly lock the  fields  and it is not  saving 
-also  some fields should have start so it will be required  . 
-######################
+× Encountered error while generating package metadata.
+╰─> from file:///opt/msgate
+
+note: This is an issue with the package mentioned above, not pip.
