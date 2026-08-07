@@ -1,0 +1,39 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="max-w-md space-y-6">
+  <div>
+    <h1 class="text-lg font-semibold">Account</h1>
+    <p class="text-sm text-slate-400 mt-1">Admin user: <span class="mono text-slate-200">admin</span></p>
+  </div>
+
+  {% if error %}
+  <p class="text-sm text-red-400">{{ error }}</p>
+  {% endif %}
+  {% if success %}
+  <p class="text-sm text-emerald-400">{{ success }}</p>
+  {% endif %}
+
+  <section class="bg-slate-900 border border-slate-800 rounded-lg p-4">
+    <h2 class="text-sm font-medium text-slate-400 mb-3">Change password</h2>
+    <form method="post" action="/ui/auth/change-password" class="space-y-3 text-sm">
+      <input type="hidden" name="next" value="/ui/account">
+      <label class="block">
+        <span class="text-slate-400">Current password</span>
+        <input name="current_password" type="password" required autocomplete="current-password"
+               class="mt-1 w-full bg-slate-950 border border-slate-700 rounded px-3 py-2">
+      </label>
+      <label class="block">
+        <span class="text-slate-400">New password</span>
+        <input name="password" type="password" required minlength="8" autocomplete="new-password"
+               class="mt-1 w-full bg-slate-950 border border-slate-700 rounded px-3 py-2">
+      </label>
+      <label class="block">
+        <span class="text-slate-400">Confirm new password</span>
+        <input name="password_confirm" type="password" required minlength="8" autocomplete="new-password"
+               class="mt-1 w-full bg-slate-950 border border-slate-700 rounded px-3 py-2">
+      </label>
+      <button type="submit" class="px-4 py-2 rounded bg-blue-600 hover:bg-blue-500">Update password</button>
+    </form>
+  </section>
+</div>
+{% endblock %}

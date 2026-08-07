@@ -11,6 +11,7 @@ from msgate.api.stats import compute_stats
 from msgate.app.state import AppState
 from msgate.auth.settings import help_url
 from msgate.auth.web_middleware import load_session
+from msgate.config.store import redact_config
 from msgate.drivers.registry import backend_label, check_backend_health
 from msgate.ui.render import templates
 
@@ -37,6 +38,16 @@ def ui_messages(request: Request, state: AppState = Depends(get_state)):
 @router.get("/ui/tools", response_class=HTMLResponse)
 def ui_tools(request: Request, state: AppState = Depends(get_state)):
     return _render(request, state, "tools.html", "Tools")
+
+
+@router.get("/ui/settings", response_class=HTMLResponse)
+def ui_settings(request: Request, state: AppState = Depends(get_state)):
+    return _render(request, state, "settings.html", "Settings")
+
+
+@router.get("/ui/account", response_class=HTMLResponse)
+def ui_account(request: Request, state: AppState = Depends(get_state)):
+    return _render(request, state, "account.html", "Account")
 
 
 @router.get("/ui/partials/stats", response_class=HTMLResponse)
@@ -70,18 +81,23 @@ def _stats(state: AppState):
 def _render(request: Request, state: AppState, template: str, page: str):
     cfg = state.runtime.get()
     stats = _stats(state)
-    return templates.TemplateResponse(
-        request,
-        template,
-        {
-            "version": __version__,
-            "page": page,
-            "stats": stats,
-            "smtp_port": cfg.smtp.port,
-            "backend_label": stats.backend_name,
-            "backend_ok": stats.backend_connected,
-            "ews_ok": stats.backend_connected,
-            "help_url": help_url(),
-            "must_change_password": bool(_session_data(request).get("must_change_password")),
-        },
-    )
+    ctx = {
+        "version": __version__,
+        "page": page,
+        "stats": stats,
+        "smtp_port": cfg.smtp.port,
+        "backend_label": stats.backend_name,
+        "backend_ok": stats.backend_connected,
+        "ews_ok": stats.backend_connected,
+        "help_url": help_url(),
+        "must_change_password": bool(_session_data(request).get("must_change_password")),
+        "error": request.query_params.get("error"),
+        "success": (
+            "Password updated."
+            if request.query_params.get("ok") == "1"
+            else None
+        ),
+    }
+    if page == "Settings":
+        ctx["config_json"] = redact_config(cfg).model_dump_json()
+    return templates.TemplateResponse(request, template, ctx)

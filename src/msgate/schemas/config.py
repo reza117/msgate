@@ -2,24 +2,45 @@
 
 from __future__ import annotations
 
-from pydantic import BaseModel, ConfigDict, EmailStr, Field, HttpUrl
+from pydantic import BaseModel, ConfigDict, EmailStr, Field, HttpUrl, field_validator
 
 from msgate.schemas.enums import AuthType, BackendType
+
+
+def _empty_str_to_none(value: object) -> object:
+    if value is None:
+        return None
+    if isinstance(value, str) and not value.strip():
+        return None
+    return value
 
 
 class EWSConfig(BaseModel):
     server_url: HttpUrl = Field(
         ...,
-        examples=["https://exchange.domain.com/EWS/Exchange.asmx"],
+        examples=["https://mail.example.com/EWS/Exchange.asmx"],
     )
     auth_type: AuthType = Field(default=AuthType.NTLM, description="Authentication scheme")
-    domain: str | None = Field(default=None, examples=["WDC"], description="Default Windows Domain")
-    username: str | None = Field(default=None, description="EWS username")
-    password: str | None = Field(default=None, description="EWS password")
+    domain: str | None = Field(
+        default=None,
+        examples=["DOMAIN"],
+        description="Default Windows Domain (example only in API docs)",
+    )
+    username: str | None = Field(
+        default=None,
+        description="EWS username (DOMAIN\\user or user@example.com)",
+        examples=["DOMAIN\\svc.msgate"],
+    )
+    password: str | None = Field(
+        default=None,
+        description="EWS password (redacted as *** on GET)",
+        examples=["***"],
+    )
     trust_self_signed: bool = Field(default=False, description="Bypass SSL verification")
     ca_file: str | None = Field(
         default=None,
         description="Path to PEM CA bundle (preferred over trust_self_signed)",
+        examples=["/etc/ssl/certs/exchange-ca.pem"],
     )
     tls_mode: str = Field(
         default="auto",
@@ -29,8 +50,13 @@ class EWSConfig(BaseModel):
     primary_smtp: str | None = Field(
         default=None,
         description="Mailbox primary SMTP for EWS when AUTH is DOMAIN\\user",
-        examples=["user@domain.com"],
+        examples=["svc.msgate@example.com"],
     )
+
+    @field_validator("domain", "username", "password", "ca_file", "primary_smtp", mode="before")
+    @classmethod
+    def blank_optional_to_none(cls, value: object) -> object:
+        return _empty_str_to_none(value)
 
 
 class GraphConfig(BaseModel):
@@ -59,6 +85,40 @@ class GatewayConfig(BaseModel):
         description="Secondary Exchange endpoint when primary send fails",
     )
     graph: GraphConfig | None = None
-    default_sender: EmailStr | None = Field(default=None, examples=["gateway@domain.com"])
+    default_sender: EmailStr | None = Field(default=None, examples=["gateway@example.com"])
 
-    model_config = ConfigDict(use_enum_values=True)
+    @field_validator("default_sender", mode="before")
+    @classmethod
+    def blank_sender_to_none(cls, value: object) -> object:
+        return _empty_str_to_none(value)
+
+    model_config = ConfigDict(
+        use_enum_values=True,
+        json_schema_extra={
+            "examples": [
+                {
+                    "backend": "ews",
+                    "smtp": {
+                        "bind_address": "127.0.0.1",
+                        "port": 1025,
+                        "max_message_size_mb": 25,
+                        "allowed_ips": ["127.0.0.1"],
+                    },
+                    "ews": {
+                        "server_url": "https://mail.example.com/EWS/Exchange.asmx",
+                        "auth_type": "ntlm",
+                        "domain": "DOMAIN",
+                        "username": "DOMAIN\\svc.msgate",
+                        "password": "***",
+                        "trust_self_signed": False,
+                        "ca_file": None,
+                        "tls_mode": "auto",
+                        "primary_smtp": "svc.msgate@example.com",
+                    },
+                    "ews_failover": None,
+                    "graph": None,
+                    "default_sender": "gateway@example.com",
+                }
+            ]
+        },
+    )

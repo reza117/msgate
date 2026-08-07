@@ -31,11 +31,19 @@ def _session(request: Request) -> dict:
     return data
 
 
-def _auth_ctx(request: Request, *, error: str | None = None) -> dict:
+def _auth_ctx(
+    request: Request,
+    *,
+    error: str | None = None,
+    forced: bool = False,
+    next_url: str = "/",
+) -> dict:
     return {
         "version": __version__,
         "error": error,
         "help_url": help_url(),
+        "forced": forced,
+        "next_url": next_url,
     }
 
 
@@ -134,10 +142,11 @@ def ui_change_password(request: Request):
     session = _session(request)
     if session.get("admin_user") != ADMIN_USERNAME:
         return RedirectResponse(url="/ui/login", status_code=303)
+    forced = bool(session.get("must_change_password"))
     return templates.TemplateResponse(
         request,
         "auth/change_password.html",
-        _auth_ctx(request),
+        _auth_ctx(request, forced=forced, next_url="/"),
     )
 
 
@@ -147,38 +156,44 @@ def auth_change_password(
     current_password: str = Form(...),
     password: str = Form(...),
     password_confirm: str = Form(...),
+    next: str = Form("/"),
     state: AppState = Depends(get_state),
 ):
+    from urllib.parse import quote
+
     session = _session(request)
     if session.get("admin_user") != ADMIN_USERNAME:
         return RedirectResponse(url="/ui/login", status_code=303)
-    if password != password_confirm:
+    forced = bool(session.get("must_change_password"))
+    next_url = next if next.startswith("/ui/") or next == "/" else "/"
+
+    def _fail(msg: str, status: int = 400):
+        if next_url.startswith("/ui/account"):
+            return RedirectResponse(
+                url=f"/ui/account?error={quote(msg)}",
+                status_code=303,
+            )
         return templates.TemplateResponse(
             request,
             "auth/change_password.html",
-            _auth_ctx(request, error="New passwords do not match"),
-            status_code=400,
+            _auth_ctx(request, error=msg, forced=forced, next_url=next_url),
+            status_code=status,
         )
+
+    if password != password_confirm:
+        return _fail("New passwords do not match")
     with state.session_factory() as session_db:
         if not check_admin_password(session_db, current_password):
-            return templates.TemplateResponse(
-                request,
-                "auth/change_password.html",
-                _auth_ctx(request, error="Current password is incorrect"),
-                status_code=401,
-            )
+            return _fail("Current password is incorrect", status=401)
         try:
             set_admin_password(session_db, password, must_change_password=False)
         except ValueError as exc:
-            return templates.TemplateResponse(
-                request,
-                "auth/change_password.html",
-                _auth_ctx(request, error=str(exc)),
-                status_code=400,
-            )
+            return _fail(str(exc))
     session["must_change_password"] = False
     request.state.msgate_session = session
-    return RedirectResponse(url="/", status_code=303)
+    if next_url.startswith("/ui/account"):
+        return RedirectResponse(url="/ui/account?ok=1", status_code=303)
+    return RedirectResponse(url=next_url or "/", status_code=303)
 
 
 @router.post("/ui/auth/logout")

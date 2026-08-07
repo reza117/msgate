@@ -19,6 +19,22 @@ def test_get_config_redacts_password() -> None:
     assert r.json()["ews"]["password"] == "***"
 
 
+def test_get_config_blank_password_stays_null() -> None:
+    from msgate.config.store import redact_config
+
+    client = make_test_client(authenticated=True)
+    state = client.app.state.msgate
+    cfg = state.runtime.get()
+    assert cfg.ews is not None
+    cleared = cfg.model_copy(update={"ews": cfg.ews.model_copy(update={"password": None})})
+    state.runtime.replace(cleared)
+    redacted = redact_config(state.runtime.get()).model_dump(mode="json")
+    assert redacted["ews"]["password"] in (None, "")
+    r = client.get("/api/v1/config")
+    assert r.status_code == 200
+    assert r.json()["ews"]["password"] in (None, "")
+
+
 def test_put_config_hot_reload() -> None:
     client = make_test_client(authenticated=True)
     cfg = client.get("/api/v1/config").json()

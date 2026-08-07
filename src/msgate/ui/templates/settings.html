@@ -1,0 +1,352 @@
+{% extends "base.html" %}
+{% block content %}
+<div x-data="settingsPage()" class="max-w-3xl space-y-6">
+  <div class="flex flex-wrap items-center justify-between gap-3">
+    <div>
+      <h1 class="text-lg font-semibold">Settings</h1>
+      <p class="text-sm text-slate-400 mt-1">
+        Locked by default. Click <strong>Edit</strong>, change values, then <strong>Save</strong>.
+        Leave EWS password blank to keep the current secret. Fields marked <span class="text-red-400">*</span> are required.
+      </p>
+    </div>
+    <div class="flex flex-wrap gap-2">
+      <button type="button" x-show="!editing" @click="startEdit()"
+              class="px-4 py-2 rounded bg-slate-700 hover:bg-slate-600 text-sm">Edit</button>
+      <button type="button" x-show="editing" @click="cancelEdit()" :disabled="saving"
+              class="px-4 py-2 rounded bg-slate-700 hover:bg-slate-600 disabled:opacity-50 text-sm">Cancel</button>
+      <button type="button" x-show="editing" @click="save()" :disabled="saving"
+              class="px-4 py-2 rounded bg-blue-600 hover:bg-blue-500 disabled:opacity-50 text-sm">
+        <span x-text="saving ? 'Saving…' : 'Save'"></span>
+      </button>
+    </div>
+  </div>
+
+  <p x-show="message" x-text="message"
+     :class="ok ? 'text-emerald-400' : 'text-red-400'"
+     class="text-sm whitespace-pre-wrap"></p>
+
+  <div class="space-y-6" :class="editing ? '' : 'opacity-90'">
+    <section class="bg-slate-900 border border-slate-800 rounded-lg p-4 space-y-3">
+      <h2 class="text-sm font-medium text-slate-400">Backend</h2>
+      <label class="block text-sm">
+        <span class="text-slate-400">Active driver <span class="text-red-400">*</span></span>
+        <select x-model="cfg.backend" :disabled="!editing"
+                class="mt-1 w-full bg-slate-950 border border-slate-700 rounded px-3 py-2 disabled:cursor-not-allowed disabled:opacity-70">
+          <option value="ews">Exchange Web Services (EWS)</option>
+          <option value="graph">Microsoft Graph (stub)</option>
+          <option value="gmail">Gmail (stub)</option>
+        </select>
+      </label>
+      <label class="block text-sm">
+        <span class="text-slate-400">Default sender</span>
+        <input x-model="cfg.default_sender" type="email" placeholder="gateway@example.com"
+               :disabled="!editing"
+               class="mt-1 w-full bg-slate-950 border border-slate-700 rounded px-3 py-2 disabled:cursor-not-allowed disabled:opacity-70">
+      </label>
+    </section>
+
+    <section class="bg-slate-900 border border-slate-800 rounded-lg p-4 space-y-3"
+             x-show="cfg.backend === 'ews'">
+      <h2 class="text-sm font-medium text-slate-400">Exchange (EWS)</h2>
+      <label class="block text-sm">
+        <span class="text-slate-400">EWS URL <span class="text-red-400">*</span></span>
+        <input x-model="ews.server_url" type="url" :disabled="!editing"
+               placeholder="https://mail.example.com/EWS/Exchange.asmx"
+               class="mt-1 w-full mono bg-slate-950 border border-slate-700 rounded px-3 py-2 text-xs disabled:cursor-not-allowed disabled:opacity-70">
+      </label>
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+        <label class="block text-sm">
+          <span class="text-slate-400">Username <span class="text-red-400">*</span></span>
+          <input x-model="ews.username" placeholder="DOMAIN\user or user@example.com"
+                 :disabled="!editing"
+                 class="mt-1 w-full bg-slate-950 border border-slate-700 rounded px-3 py-2 disabled:cursor-not-allowed disabled:opacity-70">
+        </label>
+        <label class="block text-sm">
+          <span class="text-slate-400 flex items-center gap-2 flex-wrap">
+            Password
+            <span x-show="ews.password_set" class="text-xs px-1.5 py-0.5 rounded bg-emerald-900/60 text-emerald-300">Set</span>
+            <span x-show="!ews.password_set" class="text-xs px-1.5 py-0.5 rounded bg-amber-900/60 text-amber-300">Not set</span>
+            <span x-show="!ews.password_set" class="text-red-400">*</span>
+          </span>
+          <input x-model="ews.password" type="password"
+                 :placeholder="ews.password_set ? '' : 'Enter password'"
+                 :disabled="!editing"
+                 @focus="onPasswordFocus()"
+                 @blur="onPasswordBlur()"
+                 class="mt-1 w-full bg-slate-950 border border-slate-700 rounded px-3 py-2 disabled:cursor-not-allowed disabled:opacity-70 tracking-widest"
+                 autocomplete="new-password">
+          <span class="text-xs text-slate-500 mt-1 block"
+                x-text="ews.password_set
+                  ? 'Stored password shown as dots. Focus and type to replace, or leave as-is to keep.'
+                  : 'No password stored yet. Required before Exchange can authenticate.'"></span>
+        </label>
+        <label class="block text-sm">
+          <span class="text-slate-400">Domain</span>
+          <input x-model="ews.domain" placeholder="DOMAIN" :disabled="!editing"
+                 class="mt-1 w-full bg-slate-950 border border-slate-700 rounded px-3 py-2 disabled:cursor-not-allowed disabled:opacity-70">
+        </label>
+        <label class="block text-sm">
+          <span class="text-slate-400">Auth type <span class="text-red-400">*</span></span>
+          <select x-model="ews.auth_type" :disabled="!editing"
+                  class="mt-1 w-full bg-slate-950 border border-slate-700 rounded px-3 py-2 disabled:cursor-not-allowed disabled:opacity-70">
+            <option value="ntlm">NTLM</option>
+            <option value="basic">Basic</option>
+          </select>
+        </label>
+        <label class="block text-sm md:col-span-2">
+          <span class="text-slate-400">Primary SMTP (mailbox address) <span class="text-red-400">*</span></span>
+          <input x-model="ews.primary_smtp" type="email" placeholder="svc.msgate@example.com"
+                 :disabled="!editing"
+                 class="mt-1 w-full bg-slate-950 border border-slate-700 rounded px-3 py-2 disabled:cursor-not-allowed disabled:opacity-70">
+        </label>
+        <label class="block text-sm">
+          <span class="text-slate-400">TLS mode <span class="text-red-400">*</span></span>
+          <select x-model="ews.tls_mode" :disabled="!editing"
+                  class="mt-1 w-full bg-slate-950 border border-slate-700 rounded px-3 py-2 disabled:cursor-not-allowed disabled:opacity-70">
+            <option value="auto">auto</option>
+            <option value="modern">modern</option>
+            <option value="legacy">legacy</option>
+          </select>
+        </label>
+        <label class="block text-sm">
+          <span class="text-slate-400">CA file (optional)</span>
+          <input x-model="ews.ca_file" placeholder="/path/to/ca.pem" :disabled="!editing"
+                 class="mt-1 w-full mono bg-slate-950 border border-slate-700 rounded px-3 py-2 text-xs disabled:cursor-not-allowed disabled:opacity-70">
+        </label>
+      </div>
+      <label class="inline-flex items-center gap-2 text-sm">
+        <input type="checkbox" x-model="ews.trust_self_signed" :disabled="!editing"
+               class="rounded border-slate-600 disabled:cursor-not-allowed">
+        Trust self-signed / skip TLS verify
+      </label>
+    </section>
+
+    <section class="bg-slate-900 border border-slate-800 rounded-lg p-4 space-y-3"
+             x-show="cfg.backend !== 'ews'">
+      <h2 class="text-sm font-medium text-slate-400">Other drivers</h2>
+      <p class="text-sm text-amber-300/90">
+        Graph and Gmail are stubs only. Switch back to EWS for production delivery.
+      </p>
+    </section>
+
+    <section class="bg-slate-900 border border-slate-800 rounded-lg p-4 space-y-3">
+      <h2 class="text-sm font-medium text-slate-400">Inbound SMTP (clients → msgate)</h2>
+      <p class="text-xs text-slate-500">
+        Bind address / port apply after msgate restart. Allowed IPs take effect immediately.
+      </p>
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+        <label class="block text-sm">
+          <span class="text-slate-400">Bind address <span class="text-red-400">*</span></span>
+          <input x-model="cfg.smtp.bind_address" :disabled="!editing"
+                 class="mt-1 w-full bg-slate-950 border border-slate-700 rounded px-3 py-2 disabled:cursor-not-allowed disabled:opacity-70">
+        </label>
+        <label class="block text-sm">
+          <span class="text-slate-400">Port <span class="text-red-400">*</span></span>
+          <input x-model.number="cfg.smtp.port" type="number" min="1" max="65535" :disabled="!editing"
+                 class="mt-1 w-full bg-slate-950 border border-slate-700 rounded px-3 py-2 disabled:cursor-not-allowed disabled:opacity-70">
+        </label>
+        <label class="block text-sm md:col-span-2">
+          <span class="text-slate-400">Allowed IPs (comma-separated CIDR) <span class="text-red-400">*</span></span>
+          <input x-model="allowedIpsText" :disabled="!editing"
+                 class="mt-1 w-full mono bg-slate-950 border border-slate-700 rounded px-3 py-2 text-xs disabled:cursor-not-allowed disabled:opacity-70"
+                 placeholder="127.0.0.1, 10.0.0.0/8">
+        </label>
+        <label class="block text-sm">
+          <span class="text-slate-400">Max message size (MB) <span class="text-red-400">*</span></span>
+          <input x-model.number="cfg.smtp.max_message_size_mb" type="number" min="1" max="100"
+                 :disabled="!editing"
+                 class="mt-1 w-full bg-slate-950 border border-slate-700 rounded px-3 py-2 disabled:cursor-not-allowed disabled:opacity-70">
+        </label>
+      </div>
+    </section>
+  </div>
+
+  <div class="flex justify-end gap-2" x-show="editing">
+    <button type="button" @click="cancelEdit()" :disabled="saving"
+            class="px-4 py-2 rounded bg-slate-700 hover:bg-slate-600 disabled:opacity-50 text-sm">Cancel</button>
+    <button type="button" @click="save()" :disabled="saving"
+            class="px-4 py-2 rounded bg-blue-600 hover:bg-blue-500 disabled:opacity-50 text-sm">
+      <span x-text="saving ? 'Saving…' : 'Save'"></span>
+    </button>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+function settingsPage() {
+  const initial = {{ config_json | safe }};
+  const PASSWORD_MASK = '••••••••';
+  function buildEws(src) {
+    const raw = src || {};
+    const passwordSet = !!(raw.password && String(raw.password).trim());
+    const ews = Object.assign({
+      server_url: '',
+      username: '',
+      password: '',
+      domain: '',
+      auth_type: 'ntlm',
+      primary_smtp: '',
+      tls_mode: 'auto',
+      ca_file: '',
+      trust_self_signed: false,
+      password_set: false,
+    }, raw);
+    ews.password_set = passwordSet;
+    // Show 8 dots when a password is stored (not the real secret).
+    ews.password = passwordSet ? PASSWORD_MASK : '';
+    ['username', 'domain', 'primary_smtp', 'ca_file'].forEach((k) => {
+      if (ews[k] === null || ews[k] === undefined) ews[k] = '';
+    });
+    return ews;
+  }
+  function normalizeCfg(src) {
+    const cfg = JSON.parse(JSON.stringify(src || {}));
+    if (!cfg.smtp) cfg.smtp = { bind_address: '127.0.0.1', port: 1025, max_message_size_mb: 25, allowed_ips: ['127.0.0.1'] };
+    if (cfg.default_sender === null || cfg.default_sender === undefined) cfg.default_sender = '';
+    return cfg;
+  }
+  function snapshot(cfg, ews, allowedIpsText) {
+    return JSON.stringify({ cfg, ews, allowedIpsText });
+  }
+  function formatApiError(detail) {
+    if (!detail) return 'Save failed';
+    if (typeof detail === 'string') return detail;
+    if (Array.isArray(detail)) {
+      return detail.map((e) => {
+        const loc = (e.loc || []).filter((x) => x !== 'body').join('.');
+        return (loc ? loc + ': ' : '') + (e.msg || JSON.stringify(e));
+      }).join('\n');
+    }
+    return JSON.stringify(detail);
+  }
+  const cfg0 = normalizeCfg(initial);
+  const ews0 = buildEws(initial.ews);
+  const ips0 = (initial.smtp && initial.smtp.allowed_ips || []).join(', ');
+  return {
+    cfg: cfg0,
+    ews: ews0,
+    allowedIpsText: ips0,
+    editing: false,
+    saving: false,
+    message: '',
+    ok: true,
+    _backup: snapshot(cfg0, ews0, ips0),
+    startEdit() {
+      this._backup = snapshot(this.cfg, this.ews, this.allowedIpsText);
+      this.editing = true;
+      this.message = '';
+    },
+    cancelEdit() {
+      const b = JSON.parse(this._backup);
+      this.cfg = b.cfg;
+      this.ews = b.ews;
+      this.allowedIpsText = b.allowedIpsText;
+      this.editing = false;
+      this.message = '';
+    },
+    onPasswordFocus() {
+      if (!this.editing) return;
+      if (this.ews.password === PASSWORD_MASK) this.ews.password = '';
+    },
+    onPasswordBlur() {
+      if (!this.editing) return;
+      if (this.ews.password_set && !String(this.ews.password || '').trim()) {
+        this.ews.password = PASSWORD_MASK;
+      }
+    },
+    emptyToNull(v) {
+      if (v === undefined || v === null) return null;
+      const s = String(v).trim();
+      return s === '' ? null : s;
+    },
+    validate() {
+      if (!this.cfg.backend) return 'Active driver is required';
+      if (!this.cfg.smtp.bind_address || !String(this.cfg.smtp.bind_address).trim()) {
+        return 'SMTP bind address is required';
+      }
+      if (!this.cfg.smtp.port) return 'SMTP port is required';
+      if (!this.allowedIpsText || !this.allowedIpsText.trim()) {
+        return 'Allowed IPs is required';
+      }
+      if (this.cfg.backend === 'ews') {
+        if (!this.ews.server_url || !String(this.ews.server_url).trim()) return 'EWS URL is required';
+        if (!this.ews.username || !String(this.ews.username).trim()) return 'Username is required';
+        if (!this.ews.password_set && !(this.ews.password && String(this.ews.password).trim())) {
+          return 'Password is required (none stored yet)';
+        }
+        if (
+          this.ews.password_set
+          && this.ews.password
+          && String(this.ews.password) !== PASSWORD_MASK
+          && String(this.ews.password).trim().length > 0
+          && String(this.ews.password).trim().length < 4
+        ) {
+          return 'New password looks too short';
+        }
+        if (!this.ews.primary_smtp || !String(this.ews.primary_smtp).trim()) {
+          return 'Primary SMTP (mailbox address) is required';
+        }
+        if (!this.ews.auth_type) return 'Auth type is required';
+        if (!this.ews.tls_mode) return 'TLS mode is required';
+      }
+      return null;
+    },
+    async save() {
+      this.saving = true;
+      this.message = '';
+      try {
+        const err = this.validate();
+        if (err) throw new Error(err);
+
+        const payload = JSON.parse(JSON.stringify(this.cfg));
+        payload.default_sender = this.emptyToNull(payload.default_sender);
+        payload.smtp.allowed_ips = this.allowedIpsText
+          .split(',')
+          .map((s) => s.trim())
+          .filter(Boolean);
+        if (!payload.smtp.allowed_ips.length) payload.smtp.allowed_ips = ['127.0.0.1'];
+
+        if (payload.backend === 'ews') {
+          const e = Object.assign({}, this.ews);
+          e.username = this.emptyToNull(e.username);
+          e.domain = this.emptyToNull(e.domain);
+          e.primary_smtp = this.emptyToNull(e.primary_smtp);
+          e.ca_file = this.emptyToNull(e.ca_file);
+          const typed = e.password && String(e.password).trim() ? String(e.password) : '';
+          // Mask dots mean "keep existing"; never send the mask as a real password.
+          e.password = (!typed || typed === PASSWORD_MASK) ? '***' : typed;
+          e.server_url = String(e.server_url).trim();
+          delete e.password_set;
+          payload.ews = e;
+        }
+
+        const r = await fetch('/api/v1/config', {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
+          credentials: 'same-origin',
+          body: JSON.stringify(payload),
+        });
+        const body = await r.json().catch(() => ({}));
+        if (!r.ok) {
+          throw new Error(formatApiError(body.detail) || ('HTTP ' + r.status));
+        }
+        this.cfg = normalizeCfg(body);
+        this.ews = buildEws(body.ews);
+        this.allowedIpsText = (body.smtp && body.smtp.allowed_ips || []).join(', ');
+        this._backup = snapshot(this.cfg, this.ews, this.allowedIpsText);
+        this.editing = false;
+        this.ok = true;
+        this.message = 'Saved. EWS/auth changes apply immediately; SMTP bind/port need a restart.';
+      } catch (err) {
+        this.ok = false;
+        this.message = err.message || String(err);
+        this.editing = true;
+      } finally {
+        this.saving = false;
+      }
+    },
+  };
+}
+</script>
+{% endblock %}

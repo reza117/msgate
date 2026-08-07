@@ -26,7 +26,12 @@ from msgate.auth.web_middleware import AuthMiddleware, SessionMiddleware
 def create_app(state: AppState) -> FastAPI:
     app = FastAPI(
         title="msgate API",
-        description="SMTP → EWS/Graph gateway management API",
+        description=(
+            "SMTP → EWS/Graph gateway management API.\n\n"
+            "OpenAPI **examples are fictional** (`example.com`, `DOMAIN\\\\svc.msgate`). "
+            "They are not live data. Use **Try it out** only when authenticated — "
+            "that returns real queue/config from this instance."
+        ),
         version=__version__,
     )
     app.state.msgate = state
