@@ -18,8 +18,7 @@ From a release tarball or git checkout:
 
 ```bash
 sudo ./install.sh
-sudo cp /opt/msgate/msgate.env.example /opt/msgate/msgate.env
-# Edit msgate.env if needed (e.g. MSGATE_API_HOST=0.0.0.0 for LAN UI)
+# msgate.env created from example if missing (MSGATE_API_HOST=0.0.0.0)
 sudo systemctl start msgate
 ```
 

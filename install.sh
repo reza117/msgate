@@ -103,6 +103,10 @@ chmod -R a+rX "${INSTALL_DIR}"
 # Keep venv private-ish but executable for the service user
 chown -R "${SERVICE_USER}:${SERVICE_USER}" "${INSTALL_DIR}/.venv"
 
+# Do not put literal ${...} in comments inside an unquoted heredoc — bash expands them
+# (e.g. "${}" caused "bad substitution" and aborted before writing the unit).
+# Do not set MSGATE_API_HOST here: systemd Environment= overrides EnvironmentFile=.
+# Bind address/port come only from msgate.env (see msgate.env.example).
 cat >"${UNIT_FILE}" <<EOF
 [Unit]
 Description=msgate SMTP gateway
@@ -116,11 +120,7 @@ Group=${SERVICE_USER}
 WorkingDirectory=${INSTALL_DIR}
 Environment=MSGATE_DATA_DIR=${DATA_DIR}
 Environment=MSGATE_LOG_DIR=${DATA_DIR}/logs
-# Default: localhost only. Set MSGATE_API_HOST=0.0.0.0 in msgate.env for LAN access.
-Environment=MSGATE_API_HOST=127.0.0.1
-Environment=MSGATE_API_PORT=8080
 EnvironmentFile=-${INSTALL_DIR}/msgate.env
-# Bind via MSGATE_API_HOST / MSGATE_API_PORT from Environment / msgate.env (no ${} in ExecStart).
 ExecStart=${INSTALL_DIR}/.venv/bin/msgate serve
 Restart=on-failure
 RestartSec=5
@@ -129,14 +129,18 @@ RestartSec=5
 WantedBy=multi-user.target
 EOF
 
+if [[ ! -f "${INSTALL_DIR}/msgate.env" ]]; then
+  cp "${INSTALL_DIR}/msgate.env.example" "${INSTALL_DIR}/msgate.env"
+  echo "==> Created ${INSTALL_DIR}/msgate.env from example (API bind 0.0.0.0)"
+fi
+
 chmod +x "${INSTALL_DIR}/install.sh" "${INSTALL_DIR}/uninstall.sh" 2>/dev/null || true
 
 systemctl daemon-reload
 systemctl enable msgate.service
 
 echo "==> Installed msgate ${VERSION} at ${INSTALL_DIR} (only one systemd instance)."
-echo "    1. cp ${INSTALL_DIR}/msgate.env.example ${INSTALL_DIR}/msgate.env   # if missing"
-echo "       (optional: MSGATE_API_HOST=0.0.0.0 for LAN UI; EWS via Settings)"
+echo "    1. Edit ${INSTALL_DIR}/msgate.env if needed (MSGATE_API_HOST, optional EWS seed)"
 echo "    2. systemctl start msgate"
 echo "    3. Open http://<host>:8080/"
 echo ""
