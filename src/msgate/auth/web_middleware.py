@@ -26,20 +26,46 @@ def _wants_html(request: Request) -> bool:
     return "text/html" in accept or "*/*" in accept or not accept
 
 
+def _is_htmx(request: Request) -> bool:
+    return request.headers.get("HX-Request", "").lower() == "true"
+
+
 def _redirect(url: str) -> RedirectResponse:
-    return RedirectResponse(url=url, status_code=303)
+    resp = RedirectResponse(url=url, status_code=303)
+    resp.headers["Cache-Control"] = "no-store"
+    return resp
+
+
+def _htmx_redirect(url: str, *, status_code: int = 401) -> Response:
+    """Force a full-page navigation — do not swap login HTML into an HTMX target."""
+    return Response(
+        status_code=status_code,
+        headers={"HX-Redirect": url, "Cache-Control": "no-store"},
+    )
 
 
 def _unauthorized(request: Request) -> Response:
+    if _is_htmx(request):
+        return _htmx_redirect(LOGIN_PATH, status_code=401)
     if _wants_html(request):
         return _redirect(LOGIN_PATH)
     return JSONResponse({"detail": "Not authenticated"}, status_code=401)
 
 
 def _forbidden_change(request: Request) -> Response:
+    if _is_htmx(request):
+        return _htmx_redirect(CHANGE_PATH, status_code=403)
     if _wants_html(request):
         return _redirect(CHANGE_PATH)
     return JSONResponse({"detail": "Password change required"}, status_code=403)
+
+
+def _need_setup(request: Request) -> Response:
+    if _is_htmx(request):
+        return _htmx_redirect(SETUP_PATH, status_code=401)
+    if _wants_html(request):
+        return _redirect(SETUP_PATH)
+    return JSONResponse({"detail": "Admin setup required"}, status_code=401)
 
 
 def load_session(request: Request) -> dict:
@@ -54,7 +80,7 @@ def load_session(request: Request) -> dict:
 
 def save_session(response: Response, request: Request, session: dict) -> None:
     if not session:
-        response.delete_cookie(COOKIE_NAME)
+        response.delete_cookie(COOKIE_NAME, path="/")
         return
     state = request.app.state.msgate
     key = session_key(state)
@@ -94,10 +120,7 @@ class AuthMiddleware(BaseHTTPMiddleware):
         if not has_admin:
             if path == SETUP_PATH or path.startswith(f"{AUTH_PREFIX}/setup"):
                 return await call_next(request)
-            return _redirect(SETUP_PATH) if _wants_html(request) else JSONResponse(
-                {"detail": "Admin setup required"},
-                status_code=401,
-            )
+            return _need_setup(request)
 
         logged_in = session_data.get("admin_user") == ADMIN_USERNAME
         must_change = bool(session_data.get("must_change_password"))

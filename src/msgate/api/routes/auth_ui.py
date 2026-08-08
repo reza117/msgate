@@ -17,6 +17,7 @@ from msgate.auth.admin import (
     set_admin_password,
 )
 from msgate.auth.settings import help_url
+from msgate.auth.session import COOKIE_NAME
 from msgate.auth.web_middleware import load_session
 from msgate.ui.render import templates
 
@@ -199,7 +200,10 @@ def auth_change_password(
 @router.post("/ui/auth/logout")
 def auth_logout(request: Request):
     request.state.msgate_session = {}
-    return RedirectResponse(url="/ui/login", status_code=303)
+    resp = RedirectResponse(url="/ui/login", status_code=303)
+    resp.headers["Cache-Control"] = "no-store"
+    resp.delete_cookie(COOKIE_NAME, path="/")
+    return resp
 
 
 @router.get("/ui/help", response_class=HTMLResponse)

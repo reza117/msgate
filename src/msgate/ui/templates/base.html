@@ -74,5 +74,14 @@
     </main>
   </div>
   {% block scripts %}{% endblock %}
+  <script>
+  document.body.addEventListener('htmx:responseError', (evt) => {
+    const xhr = evt.detail.xhr;
+    if (xhr && (xhr.status === 401 || xhr.status === 403)) {
+      const loc = xhr.getResponseHeader('HX-Redirect');
+      window.location.href = loc || '/ui/login';
+    }
+  });
+  </script>
 </body>
 </html>

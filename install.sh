@@ -136,13 +136,38 @@ fi
 
 chmod +x "${INSTALL_DIR}/install.sh" "${INSTALL_DIR}/uninstall.sh" 2>/dev/null || true
 
+# Previous failed installs may have left a masked unit.
+systemctl unmask msgate.service 2>/dev/null || true
 systemctl daemon-reload
-systemctl enable msgate.service
+systemctl enable --now msgate.service
 
 echo "==> Installed msgate ${VERSION} at ${INSTALL_DIR} (only one systemd instance)."
-echo "    1. Edit ${INSTALL_DIR}/msgate.env if needed (MSGATE_API_HOST, optional EWS seed)"
-echo "    2. systemctl start msgate"
-echo "    3. Open http://<host>:8080/"
+echo "    Edit ${INSTALL_DIR}/msgate.env if needed, then: sudo systemctl restart msgate"
+echo "    Open http://<host>:8080/"
+echo ""
+
+# Verify UI is up (API starts even without EWS).
+ok=0
+for _ in 1 2 3 4 5 6 7 8 9 10; do
+  if curl -fsS -m 2 "http://127.0.0.1:8080/healthz" >/dev/null 2>&1; then
+    ok=1
+    break
+  fi
+  sleep 1
+done
+
+if [[ "${ok}" -eq 1 ]]; then
+  echo "==> healthz OK — UI should be at http://<host>:8080/"
+else
+  echo "==> WARNING: healthz not responding yet. Diagnostics:" >&2
+  systemctl is-active msgate.service || true
+  systemctl status msgate.service --no-pager -l | head -40 || true
+  echo "---- recent journal ----" >&2
+  journalctl -u msgate.service -n 40 --no-pager || true
+  echo "Fix, then: sudo systemctl restart msgate" >&2
+  exit 1
+fi
+
 echo ""
 echo "    Remove:  sudo ${INSTALL_DIR}/uninstall.sh"
 echo "    Purge:   sudo ${INSTALL_DIR}/uninstall.sh --purge"
