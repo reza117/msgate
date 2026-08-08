@@ -40,29 +40,9 @@ def _cmd_serve(args: argparse.Namespace) -> int:
     state = build_app_state()
     config = state.runtime.get()
 
-    if config.ews is None:
-        log.warning(
-            "EWS not configured yet — API/UI will start; "
-            "set Exchange settings in the Web UI (Settings) or MSGATE_EWS_* env on first boot"
-        )
-    else:
-        negotiated = prepare_ews_tls(config.ews)
-        log.info(
-            "TLS ready profile=%s host=%s:%s cached=%s",
-            negotiated.profile_id.value,
-            negotiated.host,
-            negotiated.port,
-            negotiated.from_cache,
-        )
-
-    state.worker.start()
-    controller, _auth = create_controller(state.runtime, state.queue, events=state.events)
-    controller.start()
-    state.smtp_controller = controller
-    state.smtp_running = True
-
-    api_host = args.api_host
-    api_port = args.api_port
+    # Bind API/UI first so the Web UI is reachable even if TLS/EWS is slow or down.
+    api_host = args.api_host or os.environ.get("MSGATE_API_HOST", "127.0.0.1")
+    api_port = int(args.api_port or os.environ.get("MSGATE_API_PORT", "8080"))
     api_thread = threading.Thread(
         target=_run_api,
         args=(state, api_host, api_port),
@@ -70,6 +50,31 @@ def _cmd_serve(args: argparse.Namespace) -> int:
         daemon=True,
     )
     api_thread.start()
+    log.info("API/UI listening on http://%s:%s", api_host, api_port)
+
+    if config.ews is None:
+        log.warning(
+            "EWS not configured yet — API/UI will start; "
+            "set Exchange settings in the Web UI (Settings) or MSGATE_EWS_* env on first boot"
+        )
+    else:
+        try:
+            negotiated = prepare_ews_tls(config.ews)
+            log.info(
+                "TLS ready profile=%s host=%s:%s cached=%s",
+                negotiated.profile_id.value,
+                negotiated.host,
+                negotiated.port,
+                negotiated.from_cache,
+            )
+        except Exception as exc:  # noqa: BLE001 — keep UI up; delivery may fail until fixed
+            log.error("EWS TLS prepare failed (UI still up): %s", exc)
+
+    state.worker.start()
+    controller, _auth = create_controller(state.runtime, state.queue, events=state.events)
+    controller.start()
+    state.smtp_controller = controller
+    state.smtp_running = True
 
     log.info(
         "msgate %s smtp://%s:%s api://%s:%s (Ctrl+C to stop)",

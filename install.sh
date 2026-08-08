@@ -98,6 +98,10 @@ printf 'version=%s\ninstall_dir=%s\ndata_dir=%s\ninstalled_at=%s\n' \
   >"${INSTALL_DIR}/.msgate-install"
 
 chown -R "${SERVICE_USER}:${SERVICE_USER}" "${DATA_DIR}"
+# Service user must read alembic.ini / alembic/ under the install tree.
+chmod -R a+rX "${INSTALL_DIR}"
+# Keep venv private-ish but executable for the service user
+chown -R "${SERVICE_USER}:${SERVICE_USER}" "${INSTALL_DIR}/.venv"
 
 cat >"${UNIT_FILE}" <<EOF
 [Unit]
@@ -116,7 +120,8 @@ Environment=MSGATE_LOG_DIR=${DATA_DIR}/logs
 Environment=MSGATE_API_HOST=127.0.0.1
 Environment=MSGATE_API_PORT=8080
 EnvironmentFile=-${INSTALL_DIR}/msgate.env
-ExecStart=${INSTALL_DIR}/.venv/bin/msgate serve --api-host \${MSGATE_API_HOST} --api-port \${MSGATE_API_PORT}
+# Bind via MSGATE_API_HOST / MSGATE_API_PORT from Environment / msgate.env (no ${} in ExecStart).
+ExecStart=${INSTALL_DIR}/.venv/bin/msgate serve
 Restart=on-failure
 RestartSec=5
 

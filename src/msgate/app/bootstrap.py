@@ -16,12 +16,17 @@ from msgate.db.session import make_engine, make_session_factory
 from msgate.events import EventHub
 from msgate.observability.metrics import MetricsRegistry
 from msgate.observability.webhooks import WebhookNotifier
+from msgate.paths import db_path
 from msgate.queue.service import QueueService
 from msgate.queue.worker import QueueWorker
 
 
 def run_migrations() -> None:
+    path = db_path()
+    path.parent.mkdir(parents=True, exist_ok=True)
     cfg = AlembicConfig("alembic.ini")
+    # alembic.ini defaults to ./data/msgate.db — always override with MSGATE_DATA_DIR.
+    cfg.set_main_option("sqlalchemy.url", f"sqlite:///{path.resolve()}")
     command.upgrade(cfg, "head")
 
 
