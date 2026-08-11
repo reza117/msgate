@@ -29,58 +29,52 @@ docker build -f docker/Dockerfile -t msgate:local .
 
 ## Production install (systemd)
 
-### Download latest release (wget)
+### Download latest release
 
-Releases: [github.com/msgate/msgate/releases/latest](https://github.com/msgate/msgate/releases/latest)  
-Override repo with `REPO=owner/repo` if not `msgate/msgate`.
+Latest release: [github.com/reza117/msgate/releases/latest](https://github.com/reza117/msgate/releases/latest)
+
+**Step 1 — Set the version tag**
+
+Go to the [releases page](https://github.com/reza117/msgate/releases/latest), note the tag (e.g. `v0.0.16`), then:
 
 ```bash
-REPO=msgate/msgate
+TAG=v0.0.16   # replace with the latest tag
+```
 
-# Resolve the packaged .tar.gz asset (not GitHub “Source code”)
-ASSET_URL=$(wget -qO- --header="Accept: application/vnd.github+json" \
-  "https://api.github.com/repos/${REPO}/releases/latest" \
-  | python3 -c "import json,sys; d=json.load(sys.stdin); \
-print(next(a['browser_download_url'] for a in d.get('assets',[]) \
-  if (a.get('name') or '').endswith('.tar.gz') and 'msgate' in (a.get('name') or '')))")
+**Step 2 — Download and extract**
 
-wget -O msgate-latest.tar.gz "$ASSET_URL"
-tar xzf msgate-latest.tar.gz
-cd msgate-*/
+```bash
+wget -O msgate-latest.zip \
+  "https://github.com/reza117/msgate/archive/refs/tags/${TAG}.zip"
+unzip msgate-latest.zip
+cd "msgate-${TAG#v}/"
+```
+
+**Step 3 — Install**
+
+```bash
 sudo ./install.sh
 sudo systemctl start msgate
 ```
 
-Known version (replace `0.0.15` and tag):
+Open http://&lt;server-ip&gt;:8080/ — set the admin password, then **Settings → Exchange**.
 
-```bash
-wget -O msgate-0.0.15.tar.gz \
-  https://github.com/msgate/msgate/releases/download/v0.0.15/msgate-0.0.15.tar.gz
-```
-
-Private repo or API rate limits: set `MSGATE_GITHUB_TOKEN` and add  
-`--header="Authorization: Bearer ${MSGATE_GITHUB_TOKEN}"` to both `wget` calls.
-
-From a local tarball or git checkout, skip download and run `sudo ./install.sh` in the tree.
+From an already-extracted tree, skip steps 1–2 and run `sudo ./install.sh` directly.
 
 ### Upgrade (keep data)
 
 ```bash
-# On the server (uses GitHub latest release tarball; keeps DB + msgate.env):
+# On the server (keeps DB + msgate.env):
 sudo /opt/msgate/msgate-update.sh
 # same as:
 sudo /opt/msgate/msgate-update.sh --latest
 ```
 
-Requires a **`.tar.gz` asset** on the GitHub Release (not only “Source code”).  
-Repo default: `msgate/msgate` — override with `MSGATE_GITHUB_REPO=owner/repo`.
-
 Offline / already unpacked:
 
 ```bash
 sudo ./msgate-update.sh --local
-sudo ./msgate-update.sh /tmp/msgate-0.0.15.tar.gz
-sudo ./msgate-update.sh --url https://…/msgate-0.0.15.tar.gz
+sudo ./msgate-update.sh --url "https://github.com/reza117/msgate/archive/refs/tags/${TAG}.zip"
 ```
 
 Data defaults to `/var/lib/msgate`. Configure Exchange in the Web UI; env `MSGATE_EWS_*` is optional first-boot seed only.
