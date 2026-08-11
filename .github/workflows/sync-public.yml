@@ -50,7 +50,7 @@ jobs:
           git add -A
           git commit -m "Automated sync from private source [skip ci]" || true
 
-          # Explicitly push main branch and tags
+          # Force push clean code and tags to public repo
           git push origin HEAD:refs/heads/main --tags --force
 
       - name: Create GitHub Release on Public Repo
