@@ -12,6 +12,21 @@ python3 -m venv .venv
 
 Open http://127.0.0.1:8080/ — set the admin password, then **Settings** → Exchange.
 
+## Docker (optional)
+
+```bash
+docker compose -f docker/docker-compose.yml up -d --build
+```
+
+Open http://127.0.0.1:8080/ — same first-login flow as dev.  
+Data persists in the `msgate-data` volume. Optional EWS seed via env in `docker/docker-compose.yml`.
+
+Build image only:
+
+```bash
+docker build -f docker/Dockerfile -t msgate:local .
+```
+
 ## Production install (systemd)
 
 ### Download latest release (wget)
