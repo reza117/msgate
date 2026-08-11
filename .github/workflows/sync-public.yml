@@ -43,10 +43,23 @@ jobs:
         run: |
           git config --global user.name "github-actions[bot]"
           git config --global user.email "github-actions[bot]@users.noreply.github.com"
+          
+          # Update origin to point to public repo
+          git remote set-url origin git@github.com:reza117/msgate.git
 
-          git init
-          git remote add origin git@github.com:reza117/msgate.git
-          git checkout -b main
-          git add .
+          # Stage clean files and commit changes
+          git add -A
           git commit -m "Automated sync from private source [skip ci]" || exit 0
+
+          # Push code and tags to public repo
           git push origin main --tags --force
+
+
+          #git init
+          #git remote add origin git@github.com:reza117/msgate.git
+          #git checkout -b main
+          #git add .
+          #git commit -m "Automated sync from private source [skip ci]" || exit 0
+          #git push origin main --tags --force
+
+
