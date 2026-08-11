@@ -57,6 +57,8 @@ jobs:
         if: startsWith(github.ref, 'refs/tags/')
         uses: softprops/action-gh-release@v2
         with:
+          token: ${{ secrets.PUBLIC_RELEASE_TOKEN }}
+          repository: reza117/msgate
           tag_name: ${{ github.ref_name }}
           target_commitish: main
           generate_release_notes: true
