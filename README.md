@@ -14,13 +14,39 @@ Open http://127.0.0.1:8080/ — set the admin password, then **Settings** → Ex
 
 ## Production install (systemd)
 
-From a release tarball or git checkout:
+### Download latest release (wget)
+
+Releases: [github.com/msgate/msgate/releases/latest](https://github.com/msgate/msgate/releases/latest)  
+Override repo with `REPO=owner/repo` if not `msgate/msgate`.
 
 ```bash
+REPO=msgate/msgate
+
+# Resolve the packaged .tar.gz asset (not GitHub “Source code”)
+ASSET_URL=$(wget -qO- --header="Accept: application/vnd.github+json" \
+  "https://api.github.com/repos/${REPO}/releases/latest" \
+  | python3 -c "import json,sys; d=json.load(sys.stdin); \
+print(next(a['browser_download_url'] for a in d.get('assets',[]) \
+  if (a.get('name') or '').endswith('.tar.gz') and 'msgate' in (a.get('name') or '')))")
+
+wget -O msgate-latest.tar.gz "$ASSET_URL"
+tar xzf msgate-latest.tar.gz
+cd msgate-*/
 sudo ./install.sh
-# msgate.env created from example if missing (MSGATE_API_HOST=0.0.0.0)
 sudo systemctl start msgate
 ```
+
+Known version (replace `0.0.15` and tag):
+
+```bash
+wget -O msgate-0.0.15.tar.gz \
+  https://github.com/msgate/msgate/releases/download/v0.0.15/msgate-0.0.15.tar.gz
+```
+
+Private repo or API rate limits: set `MSGATE_GITHUB_TOKEN` and add  
+`--header="Authorization: Bearer ${MSGATE_GITHUB_TOKEN}"` to both `wget` calls.
+
+From a local tarball or git checkout, skip download and run `sudo ./install.sh` in the tree.
 
 ### Upgrade (keep data)
 
@@ -80,5 +106,4 @@ Ship no site-specific hosts or credentials in config examples — use placeholde
 ## Docs
 
 - Public (GitHub Pages): [`docs/`](docs/) → [msgate.github.io/msgate](https://msgate.github.io/msgate/)
-- Internal phase notes: `Private-Docs/AI-*.md`
 - In-app: sidebar **Help ↗** (`MSGATE_HELP_URL`)
