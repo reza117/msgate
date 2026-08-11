@@ -46,12 +46,18 @@ jobs:
           
           git remote set-url origin git@github.com:reza117/msgate.git
 
-          # Stage clean files and commit if changes exist
+          # Stage clean files and commit
           git add -A
           git commit -m "Automated sync from private source [skip ci]" || true
 
-          # Force push clean code and tags to public repo
+          # Force tag to point to this clean commit
+          if [ "${{ github.ref_type }}" = "tag" ]; then
+            git tag -f "${{ github.ref_name }}"
+          fi
+
+          # Push clean branch and updated tag
           git push origin HEAD:refs/heads/main --tags --force
+
 
       - name: Create GitHub Release on Public Repo
         if: startsWith(github.ref, 'refs/tags/')
