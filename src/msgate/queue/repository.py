@@ -73,8 +73,8 @@ def insert_message(
     )
     session.add(row)
     session.commit()
-    session.refresh(row)
-    return row
+    # Avoid refresh races with concurrent claim_next workers on SQLite.
+    return session.get(MessageRow, row.id) or row
 
 
 def list_messages(
@@ -107,6 +107,36 @@ def pending_messages(session: Session, *, limit: int = 20) -> list[MessageRow]:
         .limit(limit)
     )
     return list(session.scalars(stmt))
+
+
+def claim_next(session: Session) -> MessageRow | None:
+    """Atomically claim one pending message (safe for multiple workers)."""
+    from sqlalchemy import update
+
+    rows = pending_messages(session, limit=1)
+    if not rows:
+        return None
+    row = rows[0]
+    now = datetime.now(UTC)
+    result = session.execute(
+        update(MessageRow)
+        .where(
+            MessageRow.id == row.id,
+            MessageRow.status.in_(
+                [MessageStatus.QUEUED.value, MessageStatus.RETRYING.value],
+            ),
+        )
+        .values(
+            status=MessageStatus.PROCESSING.value,
+            attempts=MessageRow.attempts + 1,
+            updated_at=now,
+        )
+    )
+    session.commit()
+    if int(result.rowcount or 0) != 1:
+        return None
+    session.refresh(row)
+    return row
 
 
 def count_pending(session: Session) -> int:

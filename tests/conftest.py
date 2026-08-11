@@ -15,6 +15,7 @@ from msgate.db.models import AdminUserRow, Base, MessageRow, SettingRow  # noqa:
 from msgate.events import EventHub
 from msgate.observability.metrics import MetricsRegistry
 from msgate.observability.webhooks import WebhookNotifier
+from msgate.queue.circuit_breaker import CircuitBreaker
 from msgate.queue.service import QueueService
 from msgate.queue.worker import QueueWorker
 from msgate.schemas.config import EWSConfig, GatewayConfig, SMTPConfig
@@ -46,8 +47,16 @@ def make_test_state(*, with_ews: bool = True) -> AppState:
     metrics = MetricsRegistry()
     webhooks = WebhookNotifier()
     events = EventHub(metrics=metrics, webhooks=webhooks)
-    queue = QueueService(sf, runtime, box, events=events)
-    worker = QueueWorker(sf, runtime, box, events=events)
+    circuit = CircuitBreaker()
+    worker = QueueWorker(sf, runtime, box, events=events, circuit=circuit)
+    queue = QueueService(
+        sf,
+        runtime,
+        box,
+        events=events,
+        wake=worker.wake,
+        metrics=metrics,
+    )
     return AppState(
         runtime=runtime,
         secret_box=box,
@@ -57,6 +66,7 @@ def make_test_state(*, with_ews: bool = True) -> AppState:
         events=events,
         metrics=metrics,
         webhooks=webhooks,
+        circuit=circuit,
         smtp_running=True,
         smtp_controller=object(),
     )

@@ -1,9 +1,10 @@
-"""aiosmtpd handler: SMTP → EWS with persistent queue."""
+"""aiosmtpd handler: SMTP → queue with backpressure."""
 
 from __future__ import annotations
 
 from msgate.config.runtime import RuntimeConfig
 from msgate.logging_setup import get_logger
+from msgate.queue.circuit_breaker import CircuitBreaker
 from msgate.queue.service import QueueService
 from msgate.smtp.access import ip_allowed
 from msgate.smtp.authenticator import SmtpAuthenticator
@@ -17,10 +18,13 @@ class MsgateHandler:
         runtime: RuntimeConfig,
         authenticator: SmtpAuthenticator,
         queue: QueueService,
+        *,
+        circuit: CircuitBreaker | None = None,
     ) -> None:
         self.runtime = runtime
         self.authenticator = authenticator
         self.queue = queue
+        self.circuit = circuit
 
     async def handle_RCPT(self, server, session, envelope, address, rcpt_options):
         envelope.rcpt_tos.append(address)
@@ -40,6 +44,11 @@ class MsgateHandler:
         if ews is None:
             log.error("EWS config missing")
             return "451 temporary failure: EWS not configured"
+
+        deferred = self.queue.check_backpressure(circuit=self.circuit)
+        if deferred is not None:
+            log.warning("SMTP defer peer=%s reason=%s", peer_ip, deferred)
+            return deferred
 
         if auth is not None:
             ews_user = auth.sanitized.ews_username

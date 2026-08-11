@@ -33,6 +33,7 @@ def process_row(
     box: SecretBox,
     send_fn: LegacySendFn | None = None,
     events: EventHub | None = None,
+    already_claimed: bool = False,
 ) -> SendResult | None:
     """Attempt delivery; update row status. Returns SendResult on success."""
     config = runtime.get()
@@ -41,7 +42,8 @@ def process_row(
         repo.mark_failed(session, row, f"{driver.label()} not configured")
         return None
 
-    repo.mark_processing(session, row)
+    if not already_claimed:
+        repo.mark_processing(session, row)
     password = repo.get_password(row, box)
     mime_bytes = repo.get_mime_bytes(row)
     recipients = json.loads(row.recipients)

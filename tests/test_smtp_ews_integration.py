@@ -11,6 +11,7 @@ from conftest import memory_session_factory
 from msgate.config.runtime import RuntimeConfig
 from msgate.crypto.secrets import SecretBox
 from msgate.queue.service import QueueService
+from msgate.queue.worker import QueueWorker
 from msgate.schemas.config import EWSConfig, GatewayConfig, SMTPConfig
 from msgate.smtp.server import create_controller
 
@@ -26,6 +27,15 @@ class Captured:
     calls: list[dict]
 
 
+def _wait_calls(captured: Captured, n: int = 1, timeout: float = 3.0) -> None:
+    deadline = time.time() + timeout
+    while time.time() < deadline:
+        if len(captured.calls) >= n:
+            return
+        time.sleep(0.05)
+    raise AssertionError(f"expected {n} send(s), got {len(captured.calls)}")
+
+
 def _setup_stack(config: GatewayConfig, send_fn):
     captured = Captured(calls=[])
 
@@ -36,9 +46,23 @@ def _setup_stack(config: GatewayConfig, send_fn):
     _engine, session_factory = memory_session_factory()
     runtime = RuntimeConfig(config)
     box = SecretBox.from_passphrase("test-secret-key-for-unit-tests!!")
-    queue = QueueService(session_factory, runtime, box, send_fn=wrapped)
+    worker = QueueWorker(
+        session_factory,
+        runtime,
+        box,
+        send_fn=wrapped,
+        workers=1,
+        poll_interval=0.05,
+    )
+    queue = QueueService(
+        session_factory,
+        runtime,
+        box,
+        send_fn=wrapped,
+        wake=worker.wake,
+    )
     controller, _auth = create_controller(runtime, queue)
-    return controller, captured
+    return controller, worker, captured
 
 
 def test_smtp_auth_plain_domain_user_reaches_ews_mock() -> None:
@@ -60,7 +84,8 @@ def test_smtp_auth_plain_domain_user_reaches_ews_mock() -> None:
         ),
         default_sender="internal.wdc@example.com",
     )
-    controller, captured = _setup_stack(config, fake_send)
+    controller, worker, captured = _setup_stack(config, fake_send)
+    worker.start()
     controller.start()
     time.sleep(0.15)
     try:
@@ -77,7 +102,7 @@ def test_smtp_auth_plain_domain_user_reaches_ews_mock() -> None:
             client.login(r"WDC\internal.wdc", "s3cret")
             client.send_message(msg)
 
-        assert len(captured.calls) == 1
+        _wait_calls(captured, 1)
         call = captured.calls[0]
         assert call["ews_username"] == r"WDC\internal.wdc"
         assert call["password"] == "s3cret"
@@ -85,6 +110,7 @@ def test_smtp_auth_plain_domain_user_reaches_ews_mock() -> None:
         assert b"auth plain test" in call["mime_bytes"]
     finally:
         controller.stop()
+        worker.stop()
 
 
 def test_smtp_anonymous_allowlisted_uses_configured_ews_creds() -> None:
@@ -105,7 +131,8 @@ def test_smtp_anonymous_allowlisted_uses_configured_ews_creds() -> None:
             primary_smtp="svc@example.com",
         ),
     )
-    controller, captured = _setup_stack(config, fake_send)
+    controller, worker, captured = _setup_stack(config, fake_send)
+    worker.start()
     controller.start()
     time.sleep(0.15)
     try:
@@ -117,8 +144,9 @@ def test_smtp_anonymous_allowlisted_uses_configured_ews_creds() -> None:
         )
         with smtplib.SMTP("127.0.0.1", port, timeout=5) as client:
             client.sendmail("zabbix@example.com", ["admin@example.com"], payload)
-        assert len(captured.calls) == 1
+        _wait_calls(captured, 1)
         assert captured.calls[0]["ews_username"] == r"WDC\svc.msgate"
         assert captured.calls[0]["password"] == "svc-pass"
     finally:
         controller.stop()
+        worker.stop()

@@ -26,6 +26,16 @@
     <a href="/ui/change-password" class="underline font-medium">change it now</a>
   </div>
   {% endif %}
+  {% if capacity and capacity.level != 'ok' %}
+  <div class="border-b px-6 py-2 text-sm text-center
+              {% if capacity.level == 'critical' %}bg-red-900/80 border-red-700 text-red-100
+              {% else %}bg-amber-900/70 border-amber-700 text-amber-100{% endif %}">
+    <strong>Capacity {{ capacity.level }}</strong>
+    — {{ capacity.reasons|join('; ') }}
+    {% if capacity.hint %}<span class="block sm:inline sm:ml-1 opacity-90">{{ capacity.hint }}</span>{% endif %}
+    <a href="/ui/account" class="underline ml-2">Alert email</a>
+  </div>
+  {% endif %}
   <div class="relative flex h-full min-h-0">
     <div x-show="sidebarOpen"
          x-transition.opacity
@@ -45,6 +55,8 @@
          class="px-3 py-2 rounded {% if page=='Overview' %}bg-slate-800{% else %}hover:bg-slate-800{% endif %}">Overview</a>
       <a href="/ui/messages" @click="if (window.innerWidth < 768) sidebarOpen = false"
          class="px-3 py-2 rounded {% if page=='Messages' %}bg-slate-800{% else %}hover:bg-slate-800{% endif %}">Messages</a>
+      <a href="/ui/logs" @click="if (window.innerWidth < 768) sidebarOpen = false"
+         class="px-3 py-2 rounded {% if page=='Logs' %}bg-slate-800{% else %}hover:bg-slate-800{% endif %}">Logs</a>
       <a href="/ui/tools" @click="if (window.innerWidth < 768) sidebarOpen = false"
          class="px-3 py-2 rounded {% if page=='Tools' %}bg-slate-800{% else %}hover:bg-slate-800{% endif %}">Tools</a>
       <a href="/ui/settings" @click="if (window.innerWidth < 768) sidebarOpen = false"

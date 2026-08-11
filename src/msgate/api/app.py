@@ -16,6 +16,7 @@ from msgate.api.routes import (
     stats,
     tools,
     ui,
+    ui_logs,
     ui_messages,
     ws,
 )
@@ -39,6 +40,7 @@ def create_app(state: AppState) -> FastAPI:
     app.add_middleware(SessionMiddleware)
     app.include_router(auth_ui.router)
     app.include_router(ui.router)
+    app.include_router(ui_logs.router)
     app.include_router(ui_messages.router)
     app.include_router(health.router)
     app.include_router(metrics.router)

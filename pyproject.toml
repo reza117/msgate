@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "msgate"
-version = "0.0.13"
+version = "0.0.14"
 description = "SMTP gateway to Exchange EWS and Microsoft Graph"
 readme = "README.md"
 license = "MIT"
@@ -29,6 +29,9 @@ dev = [
   "pytest>=8.0",
   "ruff>=0.4",
   "httpx>=0.27",
+]
+postgres = [
+  "psycopg[binary]>=3.1",
 ]
 
 [project.scripts]

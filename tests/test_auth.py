@@ -112,6 +112,18 @@ def test_help_link_in_dashboard() -> None:
     assert "Help ↗" in r.text
 
 
+def test_navigation_keeps_session() -> None:
+    client = make_test_client()
+    client.post(
+        "/ui/auth/setup",
+        data={"password": "testpass12", "password_confirm": "testpass12"},
+    )
+    for path in ("/", "/ui/messages", "/ui/logs", "/ui/tools", "/ui/settings", "/ui/account", "/"):
+        r = client.get(path, follow_redirects=False)
+        assert r.status_code == 200, path
+        assert "Sign in" not in r.text
+
+
 def test_htmx_unauthenticated_gets_hx_redirect() -> None:
     """HTMX polls must not swap the login page into dashboard partials."""
     client = make_test_client()

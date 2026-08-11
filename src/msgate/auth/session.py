@@ -20,24 +20,33 @@ def session_key(state: AppState) -> bytes:
 
 
 def encode_session(data: dict[str, Any], key: bytes) -> str:
-    body = {**data, "exp": int(time.time()) + MAX_AGE}
-    payload = json.dumps(body, separators=(",", ":")).encode()
+    # Never store internal exp in the caller's dict; build a clean body.
+    body = {k: v for k, v in data.items() if k != "exp"}
+    body["exp"] = int(time.time()) + MAX_AGE
+    payload = json.dumps(body, separators=(",", ":"), sort_keys=True).encode()
     sig = hmac.new(key, payload, hashlib.sha256).digest()
-    return base64.urlsafe_b64encode(payload + b"." + sig).decode("ascii")
+    # Base64 both parts so binary sig bytes (including 0x2e '.') cannot break the split.
+    return (
+        base64.urlsafe_b64encode(payload).decode("ascii")
+        + "."
+        + base64.urlsafe_b64encode(sig).decode("ascii")
+    )
 
 
 def decode_session(token: str, key: bytes) -> dict[str, Any] | None:
     try:
-        raw = base64.urlsafe_b64decode(token.encode("ascii"))
-        payload, sep, sig = raw.rpartition(b".")
-        if not sep:
+        payload_b64, sep, sig_b64 = token.partition(".")
+        if not sep or not payload_b64 or not sig_b64:
             return None
+        payload = base64.urlsafe_b64decode(payload_b64.encode("ascii"))
+        sig = base64.urlsafe_b64decode(sig_b64.encode("ascii"))
         expected = hmac.new(key, payload, hashlib.sha256).digest()
         if not hmac.compare_digest(sig, expected):
             return None
         data = json.loads(payload.decode("utf-8"))
         if int(data.get("exp", 0)) < int(time.time()):
             return None
+        data.pop("exp", None)
         return data
     except (ValueError, json.JSONDecodeError, UnicodeDecodeError):
         return None

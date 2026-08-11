@@ -1,0 +1,80 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="space-y-4">
+  <div>
+    <h1 class="text-lg font-semibold">Logs</h1>
+    <p class="text-sm text-slate-400 mt-1">Search on-disk msgate log files (newest first).</p>
+  </div>
+
+  <form method="get" action="/ui/logs" class="bg-slate-900 border border-slate-800 rounded-lg p-4 grid grid-cols-1 md:grid-cols-6 gap-3 text-sm">
+    <label class="md:col-span-2 block">
+      <span class="text-slate-400">Search</span>
+      <input name="q" value="{{ q }}" placeholder="message id, peer, error…"
+             class="mt-1 w-full bg-slate-950 border border-slate-700 rounded px-3 py-2 mono">
+    </label>
+    <label class="block">
+      <span class="text-slate-400">Level</span>
+      <select name="level" class="mt-1 w-full bg-slate-950 border border-slate-700 rounded px-3 py-2">
+        <option value="" {% if not level %}selected{% endif %}>any</option>
+        {% for lv in ['DEBUG','INFO','WARNING','ERROR'] %}
+        <option value="{{ lv }}" {% if level==lv %}selected{% endif %}>{{ lv }}</option>
+        {% endfor %}
+      </select>
+    </label>
+    <label class="block">
+      <span class="text-slate-400">Logger contains</span>
+      <input name="logger" value="{{ logger }}" placeholder="smtp, queue, ews"
+             class="mt-1 w-full bg-slate-950 border border-slate-700 rounded px-3 py-2 mono">
+    </label>
+    <label class="block">
+      <span class="text-slate-400">Day (YYYYMMDD)</span>
+      <input name="day" value="{{ day }}" placeholder="{{ today }}"
+             class="mt-1 w-full bg-slate-950 border border-slate-700 rounded px-3 py-2 mono">
+    </label>
+    <label class="block">
+      <span class="text-slate-400">Limit</span>
+      <input name="limit" type="number" min="1" max="2000" value="{{ limit }}"
+             class="mt-1 w-full bg-slate-950 border border-slate-700 rounded px-3 py-2">
+    </label>
+    <div class="md:col-span-6 flex gap-2 items-end">
+      <button type="submit" class="px-4 py-2 rounded bg-blue-600 hover:bg-blue-500">Search</button>
+      <a href="/ui/logs" class="px-4 py-2 rounded bg-slate-800 hover:bg-slate-700">Reset</a>
+      <span class="text-xs text-slate-500 ml-auto">{{ entries|length }} row(s)
+        {% if log_files %}· files: {{ log_files|length }}{% endif %}</span>
+    </div>
+  </form>
+
+  <div class="bg-slate-900 border border-slate-800 rounded-lg overflow-hidden">
+    <div class="overflow-x-auto max-h-[70vh] overflow-y-auto">
+      <table class="w-full text-left text-xs mono">
+        <thead class="sticky top-0 bg-slate-900 border-b border-slate-800 text-slate-400">
+          <tr>
+            <th class="px-3 py-2 font-medium">Time</th>
+            <th class="px-3 py-2 font-medium">Level</th>
+            <th class="px-3 py-2 font-medium">Logger</th>
+            <th class="px-3 py-2 font-medium">Message</th>
+            <th class="px-3 py-2 font-medium">File</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% if not entries %}
+          <tr><td colspan="5" class="px-3 py-6 text-slate-500 text-center">No matching log lines.</td></tr>
+          {% endif %}
+          {% for e in entries %}
+          <tr class="border-t border-slate-800/80 hover:bg-slate-800/40 align-top
+                     {% if e.level=='ERROR' %}text-red-300
+                     {% elif e.level=='WARNING' %}text-amber-200
+                     {% else %}text-slate-200{% endif %}">
+            <td class="px-3 py-1.5 whitespace-nowrap text-slate-400">{{ e.ts or '—' }}</td>
+            <td class="px-3 py-1.5 whitespace-nowrap">{{ e.level or '—' }}</td>
+            <td class="px-3 py-1.5 whitespace-nowrap text-slate-400">{{ e.logger or '—' }}</td>
+            <td class="px-3 py-1.5 break-all">{{ e.message }}</td>
+            <td class="px-3 py-1.5 whitespace-nowrap text-slate-500">{{ e.source }}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+{% endblock %}

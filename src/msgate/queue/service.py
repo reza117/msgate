@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from collections.abc import Callable
 from dataclasses import dataclass
 from email import message_from_bytes
 
@@ -11,8 +12,11 @@ from msgate.config.runtime import RuntimeConfig
 from msgate.crypto.secrets import SecretBox
 from msgate.events import EventHub
 from msgate.logging_setup import get_logger
+from msgate.observability.metrics import MetricsRegistry
 from msgate.queue import repository as repo
-from msgate.queue.processor import LegacySendFn, process_row
+from msgate.queue.circuit_breaker import CircuitBreaker, CircuitState, queue_max_pending
+from msgate.queue.processor import LegacySendFn
+from msgate.schemas.enums import MessageStatus
 from msgate.schemas.messages import MessageRecord
 
 log = get_logger("queue.service")
@@ -34,12 +38,43 @@ class QueueService:
         *,
         send_fn: LegacySendFn | None = None,
         events: EventHub | None = None,
+        wake: Callable[[], None] | None = None,
+        metrics: MetricsRegistry | None = None,
+        max_pending: int | None = None,
     ) -> None:
         self._session_factory = session_factory
         self._runtime = runtime
         self._box = box
         self._send_fn = send_fn
         self._events = events
+        self._wake = wake
+        self._metrics = metrics
+        self._max_pending = max_pending if max_pending is not None else queue_max_pending()
+
+    def check_backpressure(self, *, circuit: CircuitBreaker | None = None) -> str | None:
+        """Return SMTP 4xx response text if accept should be deferred, else None."""
+        import os
+
+        reject_circuit = os.environ.get(
+            "MSGATE_SMTP_REJECT_ON_CIRCUIT",
+            "true",
+        ).strip().lower() in {"1", "true", "yes", "on"}
+
+        if circuit is not None and reject_circuit and circuit.state == CircuitState.OPEN:
+            if self._metrics:
+                self._metrics.inc_smtp_deferred()
+            return "451 temporary failure: outbound circuit open — try later"
+
+        with self._session_factory() as session:
+            pending = repo.count_pending(session)
+        if pending >= self._max_pending:
+            if self._metrics:
+                self._metrics.inc_smtp_deferred()
+            return (
+                f"452 insufficient storage: queue full "
+                f"({pending}/{self._max_pending}) — try later"
+            )
+        return None
 
     def accept_smtp(
         self,
@@ -53,6 +88,7 @@ class QueueService:
         ews_username: str,
         password: str,
     ) -> AcceptResult:
+        """Fast-accept: persist to queue only; workers deliver asynchronously."""
         msg = message_from_bytes(mime_bytes)
         subject = msg.get("Subject", "") or ""
 
@@ -70,31 +106,24 @@ class QueueService:
                 password=password,
                 box=self._box,
             )
-            result = process_row(
-                session,
-                row,
-                runtime=self._runtime,
-                box=self._box,
-                send_fn=self._send_fn,
-                events=self._events,
-            )
-            session.refresh(row)
-            delivered = result is not None
-            log.info(
-                "accept id=%s status=%s delivered=%s",
-                row.id,
-                row.status,
-                delivered,
-            )
+            log.info("accept id=%s status=%s (queued)", row.id, row.status)
             if self._events:
                 self._events.publish_sync(
                     "smtp.data",
-                    f"SMTP accepted {row.id} → {row.status}",
+                    f"SMTP accepted {row.id} → {MessageStatus.QUEUED.value}",
                     message_id=row.id,
                     mail_from=mail_from,
                     subject=subject,
                 )
-            return AcceptResult(message_id=row.id, status=row.status, delivered=delivered)
+            result = AcceptResult(
+                message_id=row.id,
+                status=row.status,
+                delivered=False,
+            )
+
+        if self._wake:
+            self._wake()
+        return result
 
     def submit_test(
         self,

@@ -1,4 +1,4 @@
-"""Alembic environment for msgate SQLite migrations."""
+"""Alembic environment for msgate migrations (SQLite or Postgres)."""
 
 from __future__ import annotations
 
@@ -8,12 +8,24 @@ from alembic import context
 from sqlalchemy import engine_from_config, pool
 
 from msgate.db.models import Base
+from msgate.db.url import is_sqlite_url, resolve_database_url
 
 config = context.config
 if config.config_file_name is not None:
     fileConfig(config.config_file_name)
 
+# Prefer MSGATE_DATABASE_URL / data-dir SQLite over the checked-in alembic.ini default.
+_ini_url = config.get_main_option("sqlalchemy.url") or ""
+if (not _ini_url) or _ini_url.startswith("sqlite:///./data") or _ini_url.startswith(
+    "sqlite:///data"
+):
+    config.set_main_option("sqlalchemy.url", resolve_database_url())
+
 target_metadata = Base.metadata
+
+
+def _render_as_batch(url: str | None) -> bool:
+    return bool(url and is_sqlite_url(url))
 
 
 def run_migrations_offline() -> None:
@@ -23,7 +35,7 @@ def run_migrations_offline() -> None:
         target_metadata=target_metadata,
         literal_binds=True,
         dialect_opts={"paramstyle": "named"},
-        render_as_batch=True,
+        render_as_batch=_render_as_batch(url),
     )
     with context.begin_transaction():
         context.run_migrations()
@@ -35,11 +47,12 @@ def run_migrations_online() -> None:
         prefix="sqlalchemy.",
         poolclass=pool.NullPool,
     )
+    url = config.get_main_option("sqlalchemy.url")
     with connectable.connect() as connection:
         context.configure(
             connection=connection,
             target_metadata=target_metadata,
-            render_as_batch=True,
+            render_as_batch=_render_as_batch(url),
         )
         with context.begin_transaction():
             context.run_migrations()

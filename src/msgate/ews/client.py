@@ -13,12 +13,14 @@ from exchangelib import (
     Account,
     Configuration,
     Credentials,
+    FileAttachment,
     HTMLBody,
     Mailbox,
     Message,
 )
 
 from msgate.drivers.base import SendResult
+from msgate.ews.account_cache import cache_get, cache_invalidate, cache_put
 from msgate.ews.mailbox import resolve_primary_smtp
 from msgate.logging_setup import get_logger
 from msgate.schemas.config import EWSConfig
@@ -34,6 +36,21 @@ def _auth_type(cfg: EWSConfig) -> str:
     return NTLM
 
 
+def _cache_key(
+    ews_username: str,
+    password: str,
+    cfg: EWSConfig,
+    primary: str,
+) -> tuple:
+    return (
+        str(cfg.server_url),
+        ews_username,
+        password,
+        primary,
+        _auth_type(cfg),
+    )
+
+
 def build_account(
     ews_username: str,
     password: str,
@@ -41,6 +58,7 @@ def build_account(
     *,
     mail_from: str | None = None,
     default_sender: str | None = None,
+    use_cache: bool = True,
 ) -> Account:
     if not cfg.server_url:
         raise ValueError("EWS server_url is required")
@@ -52,6 +70,13 @@ def build_account(
         cfg=cfg,
         default_sender=default_sender,
     )
+    key = _cache_key(ews_username, password, cfg, primary)
+    if use_cache:
+        cached = cache_get(key)
+        if cached is not None:
+            log.debug("EWS account cache hit user=%s", ews_username)
+            return cached
+
     log.info(
         "EWS account primary_smtp=%s auth_user=%s",
         primary,
@@ -64,12 +89,15 @@ def build_account(
         auth_type=_auth_type(cfg),
     )
 
-    return Account(
+    account = Account(
         primary_smtp_address=primary,
         config=configuration,
         autodiscover=False,
         access_type=DELEGATE,
     )
+    if use_cache:
+        cache_put(key, account)
+    return account
 
 
 def _recipients_from_envelope(envelope_rcpts: list[str]) -> list[Mailbox]:
@@ -80,6 +108,37 @@ def _recipients_from_envelope(envelope_rcpts: list[str]) -> list[Mailbox]:
         if addr:
             boxes.append(Mailbox(email_address=addr))
     return boxes
+
+
+def _is_body_part(part: EmailMessage) -> bool:
+    """True when part is inline text/html body (not a file attachment)."""
+    ctype = part.get_content_type()
+    if ctype not in {"text/plain", "text/html"}:
+        return False
+    filename = part.get_filename()
+    disp = (part.get("Content-Disposition") or "").lower()
+    if filename or "attachment" in disp:
+        return False
+    return True
+
+
+def mime_file_attachments(msg: EmailMessage) -> list[FileAttachment]:
+    """Extract non-body MIME parts as EWS file attachments (e.g. digest PDF)."""
+    attachments: list[FileAttachment] = []
+    for part in msg.walk():
+        if part.get_content_maintype() == "multipart":
+            continue
+        if _is_body_part(part):
+            continue
+        payload = part.get_payload(decode=True)
+        if not payload:
+            continue
+        name = part.get_filename() or "attachment"
+        ctype = part.get_content_type() or "application/octet-stream"
+        attachments.append(
+            FileAttachment(name=name, content=payload, content_type=ctype),
+        )
+    return attachments
 
 
 def _build_ews_message(
@@ -97,6 +156,8 @@ def _build_ews_message(
 
     if msg.is_multipart():
         for part in msg.walk():
+            if not _is_body_part(part):
+                continue
             ctype = part.get_content_type()
             if ctype == "text/html" and body_html is None:
                 payload = part.get_payload(decode=True) or b""
@@ -127,6 +188,10 @@ def _build_ews_message(
     )
     if from_addr:
         ews_msg.author = Mailbox(email_address=from_addr)
+    for att in mime_file_attachments(msg):
+        ews_msg.attach(att)
+    if ews_msg.attachments:
+        log.info("EWS message attachments=%s", len(ews_msg.attachments))
     return ews_msg
 
 
@@ -145,6 +210,7 @@ def send_mime(
     def _attempt(*, force_reprobe: bool) -> SendResult:
         if force_reprobe:
             invalidate_ews_tls(cfg)
+            cache_invalidate(username=ews_username)
             prepare_ews_tls(cfg, force_reprobe=True)
         account = build_account(
             ews_username,
@@ -166,6 +232,10 @@ def send_mime(
             rcpt_tos,
             ews_msg.subject,
         )
+        # On-prem / pre-2013 Exchange cannot send-and-save attachments in one
+        # shot; exchangelib then save()s first and requires a folder.
+        if ews_msg.attachments:
+            ews_msg.folder = account.drafts
         ews_msg.send_and_save()
         log.info("EWS send ok id=%s", getattr(ews_msg, "id", None))
         return SendResult(

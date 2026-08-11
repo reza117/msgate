@@ -22,7 +22,35 @@ sudo ./install.sh
 sudo systemctl start msgate
 ```
 
+### Upgrade (keep data)
+
+```bash
+# On the server (uses GitHub latest release tarball; keeps DB + msgate.env):
+sudo /opt/msgate/msgate-update.sh
+# same as:
+sudo /opt/msgate/msgate-update.sh --latest
+```
+
+Requires a **`.tar.gz` asset** on the GitHub Release (not only “Source code”).  
+Repo default: `msgate/msgate` — override with `MSGATE_GITHUB_REPO=owner/repo`.
+
+Offline / already unpacked:
+
+```bash
+sudo ./msgate-update.sh --local
+sudo ./msgate-update.sh /tmp/msgate-0.0.15.tar.gz
+sudo ./msgate-update.sh --url https://…/msgate-0.0.15.tar.gz
+```
+
 Data defaults to `/var/lib/msgate`. Configure Exchange in the Web UI; env `MSGATE_EWS_*` is optional first-boot seed only.
+
+### Database
+
+- **Default:** SQLite (`MSGATE_DATA_DIR/msgate.db`).
+- **Optional Postgres:** `pip install 'msgate[postgres]'` then set  
+  `MSGATE_DATABASE_URL=postgresql+psycopg://user:pass@host:5432/msgate` in `msgate.env`.
+
+Queue / blast knobs (`MSGATE_QUEUE_*`, circuit breaker) are documented in `Private-Docs/AI-14.md` and commented in `msgate.env.example` (restart required; not in Web UI yet).
 
 ### Uninstall
 
@@ -51,4 +79,6 @@ Ship no site-specific hosts or credentials in config examples — use placeholde
 
 ## Docs
 
-See `Private-Docs/AI-*.md` and the Help link in the UI.
+- Public (GitHub Pages): [`docs/`](docs/) → [msgate.github.io/msgate](https://msgate.github.io/msgate/)
+- Internal phase notes: `Private-Docs/AI-*.md`
+- In-app: sidebar **Help ↗** (`MSGATE_HELP_URL`)

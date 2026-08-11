@@ -13,20 +13,25 @@ from msgate.config.load import bootstrap_config
 from msgate.config.runtime import RuntimeConfig
 from msgate.crypto.secrets import resolve_secret_box
 from msgate.db.session import make_engine, make_session_factory
+from msgate.db.url import is_sqlite_url, resolve_database_url
 from msgate.events import EventHub
 from msgate.observability.metrics import MetricsRegistry
 from msgate.observability.webhooks import WebhookNotifier
-from msgate.paths import db_path
+from msgate.queue.circuit_breaker import CircuitBreaker
 from msgate.queue.service import QueueService
 from msgate.queue.worker import QueueWorker
 
 
 def run_migrations() -> None:
-    path = db_path()
-    path.parent.mkdir(parents=True, exist_ok=True)
+    url = resolve_database_url()
+    if is_sqlite_url(url):
+        # Ensure parent dir exists for file-backed SQLite.
+        from pathlib import Path
+
+        raw = url.removeprefix("sqlite:///")
+        Path(raw).parent.mkdir(parents=True, exist_ok=True)
     cfg = AlembicConfig("alembic.ini")
-    # alembic.ini defaults to ./data/msgate.db — always override with MSGATE_DATA_DIR.
-    cfg.set_main_option("sqlalchemy.url", f"sqlite:///{path.resolve()}")
+    cfg.set_main_option("sqlalchemy.url", url)
     command.upgrade(cfg, "head")
 
 
@@ -43,8 +48,25 @@ def build_app_state(*, send_fn=None) -> AppState:
     metrics = MetricsRegistry()
     webhooks = WebhookNotifier()
     events = EventHub(metrics=metrics, webhooks=webhooks)
-    queue = QueueService(session_factory, runtime, box, send_fn=send_fn, events=events)
-    worker = QueueWorker(session_factory, runtime, box, send_fn=send_fn, events=events)
+    circuit = CircuitBreaker()
+    worker = QueueWorker(
+        session_factory,
+        runtime,
+        box,
+        send_fn=send_fn,
+        events=events,
+        circuit=circuit,
+        metrics=metrics,
+    )
+    queue = QueueService(
+        session_factory,
+        runtime,
+        box,
+        send_fn=send_fn,
+        events=events,
+        wake=worker.wake,
+        metrics=metrics,
+    )
 
     bootstrap_admin_from_env(session_factory)
 
@@ -57,6 +79,7 @@ def build_app_state(*, send_fn=None) -> AppState:
         events=events,
         metrics=metrics,
         webhooks=webhooks,
+        circuit=circuit,
     )
     state.refresh_metrics()
     return state

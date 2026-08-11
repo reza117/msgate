@@ -53,8 +53,9 @@ def resolve_secret_box(
     key_path: Path | None = None,
 ) -> SecretBox:
     """Load key from env, file, or generate a persistent dev key."""
-    if env_key:
-        return SecretBox.from_passphrase(env_key)
+    # Empty MSGATE_SECRET_KEY= in env files must not block file/auto key.
+    if env_key and env_key.strip():
+        return SecretBox.from_passphrase(env_key.strip())
 
     path = key_path or secret_key_path()
     if path.is_file():

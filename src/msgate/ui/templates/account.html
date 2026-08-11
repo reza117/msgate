@@ -1,6 +1,6 @@
 {% extends "base.html" %}
 {% block content %}
-<div class="max-w-md space-y-6">
+<div class="max-w-lg space-y-6">
   <div>
     <h1 class="text-lg font-semibold">Account</h1>
     <p class="text-sm text-slate-400 mt-1">Admin user: <span class="mono text-slate-200">admin</span></p>
@@ -12,6 +12,85 @@
   {% if success %}
   <p class="text-sm text-emerald-400">{{ success }}</p>
   {% endif %}
+
+  <section class="bg-slate-900 border border-slate-800 rounded-lg p-4">
+    <h2 class="text-sm font-medium text-slate-400 mb-3">Capacity alerts</h2>
+    <p class="text-xs text-slate-500 mb-3">
+      Critical overload (queue / circuit) can email you via msgate’s Exchange path.
+      Thresholds also show as a banner in the UI.
+    </p>
+    <form method="post" action="/ui/account/alerts" class="space-y-3 text-sm">
+      <label class="block">
+        <span class="text-slate-400">Admin alert email</span>
+        <input name="admin_email" type="email" value="{{ ops_alerts.admin_email }}"
+               placeholder="ops@example.com"
+               class="mt-1 w-full bg-slate-950 border border-slate-700 rounded px-3 py-2">
+      </label>
+      <label class="inline-flex items-center gap-2 text-slate-300">
+        <input type="checkbox" name="email_alerts_enabled" value="1"
+               {% if ops_alerts.email_alerts_enabled %}checked{% endif %}>
+        Email me on critical capacity events
+      </label>
+      <button type="submit" class="block px-4 py-2 rounded bg-slate-700 hover:bg-slate-600">Save alerts</button>
+    </form>
+  </section>
+
+  <section class="bg-slate-900 border border-slate-800 rounded-lg p-4">
+    <h2 class="text-sm font-medium text-slate-400 mb-3">Digest reports</h2>
+    <p class="text-xs text-slate-500 mb-3">
+      Daily/weekly PDF summary (sent/failed, max delay, top errors) to the
+      <strong>Admin alert email</strong> above (Save alerts first).
+      Uses the same Exchange path. Placeholders in subject: <span class="mono">{period}</span>,
+      <span class="mono">{from}</span>, <span class="mono">{to}</span>.
+    </p>
+    {% if not ops_alerts.admin_email %}
+    <p class="text-xs text-amber-400 mb-3">No admin alert email saved yet — digests cannot send.</p>
+    {% endif %}
+    <form method="post" action="/ui/account/digests" class="space-y-3 text-sm">
+      <label class="inline-flex items-center gap-2 text-slate-300">
+        <input type="checkbox" name="digest_daily_enabled" value="1"
+               {% if ops_alerts.digest_daily_enabled %}checked{% endif %}>
+        Daily digest
+      </label>
+      <label class="inline-flex items-center gap-2 text-slate-300">
+        <input type="checkbox" name="digest_weekly_enabled" value="1"
+               {% if ops_alerts.digest_weekly_enabled %}checked{% endif %}>
+        Weekly digest
+      </label>
+      <label class="inline-flex items-center gap-2 text-slate-300">
+        <input type="checkbox" name="digest_include_body" value="1"
+               {% if ops_alerts.digest_include_body %}checked{% endif %}>
+        Include short text body (PDF always attached)
+      </label>
+      <label class="block">
+        <span class="text-slate-400">Subject template</span>
+        <input name="digest_subject" value="{{ ops_alerts.digest_subject }}"
+               class="mt-1 w-full bg-slate-950 border border-slate-700 rounded px-3 py-2 mono">
+      </label>
+      <div class="grid grid-cols-2 gap-3">
+        <label class="block">
+          <span class="text-slate-400">Hour (UTC)</span>
+          <input name="digest_hour_utc" type="number" min="0" max="23"
+                 value="{{ ops_alerts.digest_hour_utc }}"
+                 class="mt-1 w-full bg-slate-950 border border-slate-700 rounded px-3 py-2">
+        </label>
+        <label class="block">
+          <span class="text-slate-400">Weekly weekday</span>
+          <select name="digest_weekday" class="mt-1 w-full bg-slate-950 border border-slate-700 rounded px-3 py-2">
+            {% for i, name in [(0,'Monday'),(1,'Tuesday'),(2,'Wednesday'),(3,'Thursday'),(4,'Friday'),(5,'Saturday'),(6,'Sunday')] %}
+            <option value="{{ i }}" {% if ops_alerts.digest_weekday==i %}selected{% endif %}>{{ name }}</option>
+            {% endfor %}
+          </select>
+        </label>
+      </div>
+      <button type="submit" class="block px-4 py-2 rounded bg-slate-700 hover:bg-slate-600">Save digests</button>
+    </form>
+    <form method="post" action="/ui/account/digests/send" class="mt-3">
+      <button type="submit" class="px-4 py-2 rounded bg-blue-600 hover:bg-blue-500 text-sm">
+        Send digest now
+      </button>
+    </form>
+  </section>
 
   <section class="bg-slate-900 border border-slate-800 rounded-lg p-4">
     <h2 class="text-sm font-medium text-slate-400 mb-3">Change password</h2>

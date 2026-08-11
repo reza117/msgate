@@ -7,6 +7,7 @@ from aiosmtpd.controller import Controller
 from msgate.config.runtime import RuntimeConfig
 from msgate.events import EventHub
 from msgate.logging_setup import get_logger
+from msgate.queue.circuit_breaker import CircuitBreaker
 from msgate.queue.service import QueueService
 from msgate.smtp.authenticator import SmtpAuthenticator
 from msgate.smtp.handler import MsgateHandler
@@ -19,11 +20,17 @@ def create_controller(
     queue: QueueService,
     *,
     events: EventHub | None = None,
+    circuit: CircuitBreaker | None = None,
 ) -> tuple[Controller, SmtpAuthenticator]:
     config = runtime.get()
     domain = config.ews.domain if config.ews else None
     authenticator = SmtpAuthenticator(default_domain=domain, events=events)
-    handler = MsgateHandler(runtime=runtime, authenticator=authenticator, queue=queue)
+    handler = MsgateHandler(
+        runtime=runtime,
+        authenticator=authenticator,
+        queue=queue,
+        circuit=circuit,
+    )
 
     controller = Controller(
         handler,

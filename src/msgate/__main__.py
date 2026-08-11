@@ -71,7 +71,22 @@ def _cmd_serve(args: argparse.Namespace) -> int:
             log.error("EWS TLS prepare failed (UI still up): %s", exc)
 
     state.worker.start()
-    controller, _auth = create_controller(state.runtime, state.queue, events=state.events)
+    from msgate.ops.digest_scheduler import DigestScheduler
+    from msgate.ops.watcher import CapacityWatcher
+
+    watcher = CapacityWatcher(state)
+    watcher.start()
+    state.capacity_watcher = watcher
+    digests = DigestScheduler(state)
+    digests.start()
+    state.digest_scheduler = digests
+
+    controller, _auth = create_controller(
+        state.runtime,
+        state.queue,
+        events=state.events,
+        circuit=state.circuit,
+    )
     controller.start()
     state.smtp_controller = controller
     state.smtp_running = True
@@ -118,6 +133,12 @@ def _cmd_serve(args: argparse.Namespace) -> int:
         state.smtp_running = False
         controller.stop()
         state.worker.stop()
+        watcher = getattr(state, "capacity_watcher", None)
+        if watcher is not None:
+            watcher.stop()
+        digests = getattr(state, "digest_scheduler", None)
+        if digests is not None:
+            digests.stop()
         log.info("msgate stopped")
     return 0
 
