@@ -9,9 +9,32 @@ set -euo pipefail
 INSTALL_DIR="${MSGATE_INSTALL_DIR:-/opt/msgate}"
 DATA_DIR="${MSGATE_DATA_DIR:-/var/lib/msgate}"
 SERVICE_USER="${MSGATE_USER:-msgate}"
-PYTHON="${PYTHON:-python3}"
+PYTHON="${PYTHON:-}"
 UNIT_FILE="/etc/systemd/system/msgate.service"
 FORCE=0
+
+python_ok() {
+  command -v "$1" &>/dev/null && "$1" -c 'import sys; sys.exit(0 if sys.version_info >= (3, 11) else 1)' 2>/dev/null
+}
+
+resolve_python() {
+  if [[ -n "${PYTHON}" ]]; then
+    python_ok "${PYTHON}" && return 0
+    echo "ERROR: ${PYTHON} is missing or older than Python 3.11." >&2
+    return 1
+  fi
+  local candidate
+  for candidate in python3.12 python3.11 python3; do
+    if python_ok "${candidate}"; then
+      PYTHON="${candidate}"
+      return 0
+    fi
+  done
+  echo "ERROR: Python 3.11+ required (found: $(python3 --version 2>/dev/null || echo none))." >&2
+  echo "       Ubuntu 20.04: install python3.11, then run:" >&2
+  echo "         sudo env PYTHON=python3.11 $0" >&2
+  return 1
+}
 
 for arg in "$@"; do
   case "${arg}" in
@@ -33,6 +56,9 @@ if [[ "$(id -u)" -ne 0 ]]; then
   echo "Run as root: sudo $0" >&2
   exit 1
 fi
+
+resolve_python || exit 1
+echo "==> Using ${PYTHON} ($(${PYTHON} --version))"
 
 # Refuse a second parallel install (different prefix while unit already exists).
 if [[ -f "${UNIT_FILE}" ]]; then

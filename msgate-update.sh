@@ -20,7 +20,7 @@ set -euo pipefail
 
 INSTALL_DIR="${MSGATE_INSTALL_DIR:-/opt/msgate}"
 DATA_DIR="${MSGATE_DATA_DIR:-/var/lib/msgate}"
-GITHUB_REPO="${MSGATE_GITHUB_REPO:-msgate/msgate}"
+GITHUB_REPO="${MSGATE_GITHUB_REPO:-reza117/msgate}"
 TMP_ROOT=""
 MODE="" # latest | local | url | path
 SOURCE=""
@@ -105,26 +105,30 @@ fetch_latest_asset_url() {
   fi
 
   python3 - "${json}" <<'PY'
-import json, sys
+import json, os, sys
 data = json.loads(sys.argv[1])
 tag = data.get("tag_name") or ""
 assets = data.get("assets") or []
-# Prefer packaged release tarball, not GitHub auto "Source code" (those are not in assets).
 candidates = []
 for a in assets:
     name = (a.get("name") or "").lower()
     url = a.get("browser_download_url") or ""
     if not url:
         continue
-    if name.endswith((".tar.gz", ".tgz")) and "msgate" in name:
+    if name.endswith((".tar.gz", ".tgz", ".zip")) and "msgate" in name:
         candidates.append((0, name, url, tag))
-    elif name.endswith((".tar.gz", ".tgz")):
+    elif name.endswith((".tar.gz", ".tgz", ".zip")):
         candidates.append((1, name, url, tag))
-if not candidates:
-    print("ERROR: latest release has no .tar.gz asset. Attach msgate-VERSION.tar.gz to the GitHub Release.", file=sys.stderr)
+if candidates:
+    candidates.sort(key=lambda t: (t[0], t[1]))
+    _name, url, tag = candidates[0][1], candidates[0][2], candidates[0][3]
+    print(f"{tag}\t{url}")
+    sys.exit(0)
+if not tag:
+    print("ERROR: latest release has no tag_name", file=sys.stderr)
     sys.exit(2)
-candidates.sort(key=lambda t: (t[0], t[1]))
-_name, url, tag = candidates[0][1], candidates[0][2], candidates[0][3]
+repo = os.environ.get("MSGATE_GITHUB_REPO", "reza117/msgate")
+url = f"https://github.com/{repo}/archive/refs/tags/{tag}.zip"
 print(f"{tag}\t{url}")
 PY
 }
@@ -161,8 +165,28 @@ resolve_tree() {
         fi
         return
         ;;
+      *.zip)
+        if [[ -z "${TMP_ROOT}" ]]; then
+          TMP_ROOT="$(mktemp -d /tmp/msgate-update.XXXXXX)"
+        fi
+        local extract_dir="${TMP_ROOT}/extract"
+        mkdir -p "${extract_dir}"
+        echo "==> Extracting ${src}"
+        unzip -q "${src}" -d "${extract_dir}"
+        local top
+        top="$(find "${extract_dir}" -mindepth 1 -maxdepth 1 -type d | head -n 1)"
+        if [[ -n "${top}" && -f "${top}/install.sh" ]]; then
+          printf '%s\n' "${top}"
+        elif [[ -f "${extract_dir}/install.sh" ]]; then
+          printf '%s\n' "${extract_dir}"
+        else
+          echo "ERROR: zip does not contain install.sh" >&2
+          exit 1
+        fi
+        return
+        ;;
       *)
-        echo "ERROR: unsupported file (want .tar.gz or a directory): ${src}" >&2
+        echo "ERROR: unsupported file (want .tar.gz, .zip, or a directory): ${src}" >&2
         exit 1
         ;;
     esac
@@ -226,14 +250,22 @@ case "${MODE}" in
     echo "    Tag: ${tag}"
     echo "    Asset: ${URL}"
     TMP_ROOT="$(mktemp -d /tmp/msgate-update.XXXXXX)"
-    archive="${TMP_ROOT}/msgate-release.tar.gz"
+    if [[ "${URL}" == *.zip ]]; then
+      archive="${TMP_ROOT}/msgate-release.zip"
+    else
+      archive="${TMP_ROOT}/msgate-release.tar.gz"
+    fi
     echo "==> Downloading"
     download "${URL}" "${archive}"
     TREE="$(resolve_tree "${archive}")"
     ;;
   url)
     TMP_ROOT="$(mktemp -d /tmp/msgate-update.XXXXXX)"
-    archive="${TMP_ROOT}/msgate-release.tar.gz"
+    if [[ "${URL}" == *.zip ]]; then
+      archive="${TMP_ROOT}/msgate-release.zip"
+    else
+      archive="${TMP_ROOT}/msgate-release.tar.gz"
+    fi
     echo "==> Downloading ${URL}"
     download "${URL}" "${archive}"
     TREE="$(resolve_tree "${archive}")"

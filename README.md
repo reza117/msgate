@@ -14,27 +14,60 @@ SMTP gateway for Exchange Web Services (EWS). Clients (Zabbix, scripts, etc.) su
 
 ## Production install (systemd)
 
-### Step 1 — Download the latest release
+**Requirements:** Linux with **Python 3.11+** (Ubuntu 22.04+ includes it; Ubuntu 20.04 needs an extra package — see below).
 
-Go to the [releases page](https://github.com/reza117/msgate/releases/latest), note the tag (e.g. `v0.0.16`), then run on your server:
+### Step 0 — Python 3.11 (Ubuntu 20.04 only)
+
+Skip this if `python3.11 --version` already works.
 
 ```bash
-TAG=v0.0.16   # replace with the tag you see on the releases page
+sudo apt update
+sudo apt install -y software-properties-common
+sudo add-apt-repository -y ppa:deadsnakes/ppa
+sudo apt install -y python3.11 python3.11-venv
+python3.11 --version
+```
 
+This installs Python 3.11 **alongside** system Python 3.8 — it does not replace it (safe for Zabbix and other services).
+
+### Step 1 — Download the latest release
+
+Latest release page: [github.com/reza117/msgate/releases/latest](https://github.com/reza117/msgate/releases/latest)
+
+Resolve the tag automatically (no hardcoded version):
+
+```bash
+TAG=$(wget -qO- --header="Accept: application/vnd.github+json" \
+  "https://api.github.com/repos/reza117/msgate/releases/latest" \
+  | python3 -c "import json,sys; print(json.load(sys.stdin)['tag_name'])")
+
+echo "Downloading ${TAG}..."
 wget -O "msgate-${TAG}.zip" \
   "https://github.com/reza117/msgate/archive/refs/tags/${TAG}.zip"
 unzip "msgate-${TAG}.zip"
 cd "msgate-${TAG#v}/"
 ```
 
+Or pick a specific tag manually from the [releases page](https://github.com/reza117/msgate/releases/latest) and set `TAG=v0.0.20` before the `wget` line.
+
 ### Step 2 — Install
+
+`install.sh` creates `/opt/msgate`, a Python venv, and the systemd unit.  
+On Ubuntu 20.04, pass Python explicitly (`sudo` does not keep `PYTHON=` from the shell):
+
+```bash
+sudo env PYTHON=python3.11 ./install.sh
+```
+
+On hosts where `python3` is already 3.11+:
 
 ```bash
 sudo ./install.sh
-sudo systemctl start msgate
 ```
 
-`install.sh` creates `/opt/msgate`, sets up a Python venv, installs the service unit, and starts msgate on boot.
+```bash
+sudo systemctl start msgate
+```
 
 ### Step 3 — Configure
 
@@ -45,7 +78,6 @@ Open `http://<server-ip>:8080/` — set the admin password, then **Settings → 
 ```bash
 sudo /opt/msgate/msgate-update.sh          # pulls latest from GitHub
 sudo /opt/msgate/msgate-update.sh --local  # already-unpacked tree
-sudo /opt/msgate/msgate-update.sh --url "https://github.com/reza117/msgate/archive/refs/tags/${TAG}.zip"
 ```
 
 DB and `msgate.env` are preserved across upgrades.
@@ -84,7 +116,7 @@ docker build -f docker/Dockerfile -t msgate:local .
 
 ## Dev setup
 
-For contributors or local testing only. Requires the source tree (clone or extracted zip).
+For contributors or local testing only. Requires the source tree (clone or extracted zip) and **Python 3.11+**.
 
 ```bash
 python3 -m venv .venv
