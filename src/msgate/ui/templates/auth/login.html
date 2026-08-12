@@ -1,7 +1,7 @@
 {% extends "auth/layout.html" %}
 {% block content %}
 <h2 class="text-lg font-medium mb-4 text-center">Sign in</h2>
-<form method="post" action="/ui/auth/login" class="space-y-4">
+<form method="post" action="{{ rp('/ui/auth/login') }}" class="space-y-4">
   <div>
     <label class="block text-sm text-slate-400 mb-1" for="username">Username</label>
     <input id="username" name="username" type="text" value="admin" readonly

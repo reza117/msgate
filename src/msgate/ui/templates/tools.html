@@ -3,7 +3,7 @@
 <div class="grid grid-cols-1 xl:grid-cols-2 gap-6">
   <section class="bg-slate-900 border border-slate-800 rounded-lg p-4">
     <h2 class="text-sm font-medium text-slate-400 mb-3">Send Test Email</h2>
-    <form class="space-y-3 text-sm" hx-post="/api/v1/tools/send-test" hx-swap="none"
+    <form class="space-y-3 text-sm" hx-post="{{ rp('/api/v1/tools/send-test') }}" hx-swap="none"
           hx-on::after-request="alert(event.detail.successful ? 'Queued — check Messages' : 'Failed')">
       <input name="sender" placeholder="From" class="w-full bg-slate-950 border border-slate-700 rounded px-3 py-2" required>
       <input name="recipients" placeholder="To (comma-separated)" class="w-full bg-slate-950 border border-slate-700 rounded px-3 py-2" required>
@@ -16,7 +16,7 @@
 
   <section id="auth" class="bg-slate-900 border border-slate-800 rounded-lg p-4">
     <h2 class="text-sm font-medium text-slate-400 mb-3">Auth Simulator</h2>
-    <form hx-post="/api/v1/tools/auth-simulate" hx-target="#auth-result" hx-swap="innerHTML" class="space-y-3 text-sm">
+    <form hx-post="{{ rp('/api/v1/tools/auth-simulate') }}" hx-target="#auth-result" hx-swap="innerHTML" class="space-y-3 text-sm">
       <select name="mechanism" class="w-full bg-slate-950 border border-slate-700 rounded px-3 py-2">
         <option value="PLAIN">AUTH PLAIN (base64)</option>
         <option value="LOGIN">AUTH LOGIN (base64 user)</option>
@@ -30,7 +30,7 @@
 
 <section class="mt-6 bg-slate-900 border border-slate-800 rounded-lg p-4">
   <h2 class="text-sm font-medium text-slate-400 mb-3">Exchange Health Check</h2>
-  <button hx-post="/api/v1/tools/ews-health" hx-target="#health-result" hx-swap="innerHTML"
+  <button hx-post="{{ rp('/api/v1/tools/ews-health') }}" hx-target="#health-result" hx-swap="innerHTML"
           class="px-4 py-2 rounded bg-purple-700 hover:bg-purple-600 text-sm">Run health check</button>
   <div id="health-result" class="mt-4 mono text-xs"></div>
 </section>

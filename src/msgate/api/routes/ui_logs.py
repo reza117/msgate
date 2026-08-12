@@ -9,12 +9,13 @@ from msgate import __version__
 from msgate.api.deps import get_state
 from msgate.api.stats import compute_stats
 from msgate.app.state import AppState
-from msgate.auth.settings import help_url
+from msgate.auth.settings import external_help_url, help_url
 from msgate.auth.web_middleware import load_session
 from msgate.drivers.registry import backend_label, check_backend_health
 from msgate.observability.log_reader import list_log_files, search_logs, today_log_stem
 from msgate.ops.alerts_config import load_ops_alerts
 from msgate.ops.capacity import evaluate_capacity
+from msgate.ui.context import template_context
 from msgate.ui.render import templates
 
 router = APIRouter(tags=["ui-logs"])
@@ -65,26 +66,28 @@ def ui_logs(request: Request, state: AppState = Depends(get_state)):
     return templates.TemplateResponse(
         request,
         "logs.html",
-        {
-            "version": __version__,
-            "page": "Logs",
-            "stats": stats,
-            "smtp_port": cfg.smtp.port,
-            "backend_label": stats.backend_name,
-            "backend_ok": stats.backend_connected,
-            "ews_ok": stats.backend_connected,
-            "help_url": help_url(),
-            "must_change_password": bool(_session_data(request).get("must_change_password")),
-            "capacity": capacity,
-            "q": q,
-            "level": level,
-            "logger": logger,
-            "day": day,
-            "limit": limit,
-            "entries": entries,
-            "log_files": [p.name for p in files[:30]],
-            "today": today_log_stem(),
-            "error": None,
-            "success": None,
-        },
+        template_context(
+            request,
+            version=__version__,
+            page="Logs",
+            stats=stats,
+            smtp_port=cfg.smtp.port,
+            backend_label=stats.backend_name,
+            backend_ok=stats.backend_connected,
+            ews_ok=stats.backend_connected,
+            help_url=help_url(),
+            external_help_url=external_help_url(),
+            must_change_password=bool(_session_data(request).get("must_change_password")),
+            capacity=capacity,
+            q=q,
+            level=level,
+            logger=logger,
+            day=day,
+            limit=limit,
+            entries=entries,
+            log_files=[p.name for p in files[:30]],
+            today=today_log_stem(),
+            error=None,
+            success=None,
+        ),
     )

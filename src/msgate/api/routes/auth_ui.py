@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from urllib.parse import quote
+
 from fastapi import APIRouter, Depends, Form, Request
 from fastapi.responses import HTMLResponse, RedirectResponse
 
@@ -16,9 +18,11 @@ from msgate.auth.admin import (
     get_admin,
     set_admin_password,
 )
-from msgate.auth.settings import help_url
+from msgate.auth.settings import external_help_url, help_url
 from msgate.auth.session import COOKIE_NAME
 from msgate.auth.web_middleware import load_session
+from msgate.http.root_path import cookie_path, join_root
+from msgate.ui.context import template_context
 from msgate.ui.render import templates
 
 router = APIRouter(tags=["auth"])
@@ -32,6 +36,10 @@ def _session(request: Request) -> dict:
     return data
 
 
+def _redirect(request: Request, path: str) -> RedirectResponse:
+    return RedirectResponse(url=join_root(request, path), status_code=303)
+
+
 def _auth_ctx(
     request: Request,
     *,
@@ -39,13 +47,15 @@ def _auth_ctx(
     forced: bool = False,
     next_url: str = "/",
 ) -> dict:
-    return {
-        "version": __version__,
-        "error": error,
-        "help_url": help_url(),
-        "forced": forced,
-        "next_url": next_url,
-    }
+    return template_context(
+        request,
+        version=__version__,
+        error=error,
+        help_url=help_url(),
+        external_help_url=external_help_url(),
+        forced=forced,
+        next_url=next_url,
+    )
 
 
 def _login_session(request: Request, *, must_change: bool) -> None:
@@ -59,7 +69,7 @@ def _login_session(request: Request, *, must_change: bool) -> None:
 def ui_setup(request: Request, state: AppState = Depends(get_state)):
     with state.session_factory() as session:
         if admin_exists(session):
-            return RedirectResponse(url="/ui/login", status_code=303)
+            return _redirect(request, "/ui/login")
     return templates.TemplateResponse(
         request,
         "auth/setup.html",
@@ -84,7 +94,7 @@ def auth_setup(
     try:
         with state.session_factory() as session:
             if admin_exists(session):
-                return RedirectResponse(url="/ui/login", status_code=303)
+                return _redirect(request, "/ui/login")
             create_admin(session, password, must_change_password=False)
     except ValueError as exc:
         return templates.TemplateResponse(
@@ -94,19 +104,19 @@ def auth_setup(
             status_code=400,
         )
     _login_session(request, must_change=False)
-    return RedirectResponse(url="/", status_code=303)
+    return _redirect(request, "/")
 
 
 @router.get("/ui/login", response_class=HTMLResponse)
 def ui_login(request: Request, state: AppState = Depends(get_state)):
     with state.session_factory() as session:
         if not admin_exists(session):
-            return RedirectResponse(url="/ui/setup", status_code=303)
+            return _redirect(request, "/ui/setup")
     session = _session(request)
     if session.get("admin_user") == ADMIN_USERNAME:
         if session.get("must_change_password"):
-            return RedirectResponse(url="/ui/change-password", status_code=303)
-        return RedirectResponse(url="/", status_code=303)
+            return _redirect(request, "/ui/change-password")
+        return _redirect(request, "/")
     return templates.TemplateResponse(
         request,
         "auth/login.html",
@@ -122,7 +132,7 @@ def auth_login(
 ):
     with state.session_factory() as session:
         if not admin_exists(session):
-            return RedirectResponse(url="/ui/setup", status_code=303)
+            return _redirect(request, "/ui/setup")
         row = get_admin(session)
         if not check_admin_password(session, password):
             return templates.TemplateResponse(
@@ -134,15 +144,15 @@ def auth_login(
         must_change = bool(row and row.must_change_password)
     _login_session(request, must_change=must_change)
     if must_change:
-        return RedirectResponse(url="/ui/change-password", status_code=303)
-    return RedirectResponse(url="/", status_code=303)
+        return _redirect(request, "/ui/change-password")
+    return _redirect(request, "/")
 
 
 @router.get("/ui/change-password", response_class=HTMLResponse)
 def ui_change_password(request: Request):
     session = _session(request)
     if session.get("admin_user") != ADMIN_USERNAME:
-        return RedirectResponse(url="/ui/login", status_code=303)
+        return _redirect(request, "/ui/login")
     forced = bool(session.get("must_change_password"))
     return templates.TemplateResponse(
         request,
@@ -160,20 +170,15 @@ def auth_change_password(
     next: str = Form("/"),
     state: AppState = Depends(get_state),
 ):
-    from urllib.parse import quote
-
     session = _session(request)
     if session.get("admin_user") != ADMIN_USERNAME:
-        return RedirectResponse(url="/ui/login", status_code=303)
+        return _redirect(request, "/ui/login")
     forced = bool(session.get("must_change_password"))
     next_url = next if next.startswith("/ui/") or next == "/" else "/"
 
     def _fail(msg: str, status: int = 400):
         if next_url.startswith("/ui/account"):
-            return RedirectResponse(
-                url=f"/ui/account?error={quote(msg)}",
-                status_code=303,
-            )
+            return _redirect(request, f"/ui/account?error={quote(msg)}")
         return templates.TemplateResponse(
             request,
             "auth/change_password.html",
@@ -193,16 +198,16 @@ def auth_change_password(
     session["must_change_password"] = False
     request.state.msgate_session = session
     if next_url.startswith("/ui/account"):
-        return RedirectResponse(url="/ui/account?ok=1", status_code=303)
-    return RedirectResponse(url=next_url or "/", status_code=303)
+        return _redirect(request, "/ui/account?ok=1")
+    return _redirect(request, next_url or "/")
 
 
 @router.post("/ui/auth/logout")
 def auth_logout(request: Request):
     request.state.msgate_session = {}
-    resp = RedirectResponse(url="/ui/login", status_code=303)
+    resp = _redirect(request, "/ui/login")
     resp.headers["Cache-Control"] = "no-store"
-    resp.delete_cookie(COOKIE_NAME, path="/")
+    resp.delete_cookie(COOKIE_NAME, path=cookie_path(request))
     return resp
 
 

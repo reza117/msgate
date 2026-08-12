@@ -7,6 +7,7 @@ from fastapi.responses import HTMLResponse
 
 from msgate.api.deps import get_state
 from msgate.app.state import AppState
+from msgate.ui.context import template_context
 from msgate.ui.render import templates
 
 router = APIRouter(tags=["ui"])
@@ -19,5 +20,5 @@ def partial_message_table(request: Request, state: AppState = Depends(get_state)
     return templates.TemplateResponse(
         request,
         "partials/message_table.html",
-        {"rows": rows},
+        template_context(request, rows=rows),
     )

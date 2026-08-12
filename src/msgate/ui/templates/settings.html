@@ -329,7 +329,7 @@ function settingsPage() {
           payload.ews = e;
         }
 
-        const r = await fetch('/api/v1/config', {
+        const r = await fetch({{ rp('/api/v1/config') | tojson }}, {
           method: 'PUT',
           headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
           credentials: 'same-origin',

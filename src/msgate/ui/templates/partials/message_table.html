@@ -11,7 +11,7 @@
       <td><span class="px-2 py-0.5 rounded bg-slate-800 text-xs">{{ r.status }}</span></td>
       <td>
         <button class="text-blue-400 hover:underline"
-                hx-get="/api/v1/ui/messages/{{ r.id }}"
+                hx-get="{{ rp('/api/v1/ui/messages/' ~ r.id) }}"
                 hx-target="#inspector" hx-swap="innerHTML">Inspect</button>
       </td>
     </tr>

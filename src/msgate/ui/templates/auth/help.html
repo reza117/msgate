@@ -2,7 +2,7 @@
 {% block content %}
 <h2 class="text-lg font-medium mb-4 text-center">Help</h2>
 <p class="text-slate-400 text-sm mb-4 text-center">
-  Full documentation is hosted on GitHub Pages.
+  Quick reference below. Full documentation is on GitHub.
 </p>
 <div class="text-slate-500 text-xs mb-6 space-y-2 leading-relaxed">
   <p>
@@ -15,11 +15,11 @@
     Zabbix “Email from” must match the mailbox primary SMTP (or have Send As rights).
   </p>
 </div>
-<a href="{{ help_url }}" target="_blank" rel="noopener"
+<a href="{{ external_help_url }}" target="_blank" rel="noopener"
    class="block w-full py-2 rounded bg-slate-800 hover:bg-slate-700 text-center font-medium">
-  Open documentation ↗
+  Open documentation on GitHub ↗
 </a>
 <p class="text-slate-500 text-xs mt-4 text-center">
-  <a href="/" class="hover:text-slate-300">← Back to dashboard</a>
+  <a href="{{ rp('/') }}" class="hover:text-slate-300">← Back to dashboard</a>
 </p>
 {% endblock %}

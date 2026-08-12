@@ -6,7 +6,7 @@
     <p class="text-sm text-slate-400 mt-1">Search on-disk msgate log files (newest first).</p>
   </div>
 
-  <form method="get" action="/ui/logs" class="bg-slate-900 border border-slate-800 rounded-lg p-4 grid grid-cols-1 md:grid-cols-6 gap-3 text-sm">
+  <form method="get" action="{{ rp('/ui/logs') }}" class="bg-slate-900 border border-slate-800 rounded-lg p-4 grid grid-cols-1 md:grid-cols-6 gap-3 text-sm">
     <label class="md:col-span-2 block">
       <span class="text-slate-400">Search</span>
       <input name="q" value="{{ q }}" placeholder="message id, peer, error…"
@@ -38,7 +38,7 @@
     </label>
     <div class="md:col-span-6 flex gap-2 items-end">
       <button type="submit" class="px-4 py-2 rounded bg-blue-600 hover:bg-blue-500">Search</button>
-      <a href="/ui/logs" class="px-4 py-2 rounded bg-slate-800 hover:bg-slate-700">Reset</a>
+      <a href="{{ rp('/ui/logs') }}" class="px-4 py-2 rounded bg-slate-800 hover:bg-slate-700">Reset</a>
       <span class="text-xs text-slate-500 ml-auto">{{ entries|length }} row(s)
         {% if log_files %}· files: {{ log_files|length }}{% endif %}</span>
     </div>

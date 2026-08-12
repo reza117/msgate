@@ -9,15 +9,21 @@ from msgate import __version__
 from msgate.api.deps import get_state
 from msgate.api.stats import compute_stats
 from msgate.app.state import AppState
-from msgate.auth.settings import help_url
+from msgate.auth.settings import external_help_url, help_url
 from msgate.auth.web_middleware import load_session
 from msgate.config.store import redact_config
 from msgate.drivers.registry import backend_label, check_backend_health
+from msgate.http.root_path import join_root
 from msgate.ops.alerts_config import load_ops_alerts, save_ops_alerts
 from msgate.ops.capacity import evaluate_capacity
+from msgate.ui.context import template_context
 from msgate.ui.render import templates
 
 router = APIRouter(tags=["ui"])
+
+
+def _redirect(request: Request, path: str) -> RedirectResponse:
+    return RedirectResponse(url=join_root(request, path), status_code=303)
 
 
 def _session_data(request: Request) -> dict:
@@ -64,7 +70,7 @@ def ui_account_alerts(
         ops.admin_email = admin_email.strip()
         ops.email_alerts_enabled = email_alerts_enabled is not None
         save_ops_alerts(session, ops)
-    return RedirectResponse(url="/ui/account?alerts=1", status_code=303)
+    return _redirect(request, "/ui/account?alerts=1")
 
 
 @router.post("/ui/account/digests")
@@ -87,7 +93,7 @@ def ui_account_digests(
         ops.digest_hour_utc = max(0, min(23, int(digest_hour_utc)))
         ops.digest_weekday = max(0, min(6, int(digest_weekday)))
         save_ops_alerts(session, ops)
-    return RedirectResponse(url="/ui/account?digests=1", status_code=303)
+    return _redirect(request, "/ui/account?digests=1")
 
 
 @router.post("/ui/account/digests/send")
@@ -102,12 +108,9 @@ def ui_account_digests_send(request: Request, state: AppState = Depends(get_stat
         state.digest_scheduler = sched
     result = sched.send_manual()
     if result.ok:
-        return RedirectResponse(url="/ui/account?digest_sent=1", status_code=303)
+        return _redirect(request, "/ui/account?digest_sent=1")
     detail = result.error or "Digest not sent."
-    return RedirectResponse(
-        url=f"/ui/account?error={quote(detail)}",
-        status_code=303,
-    )
+    return _redirect(request, f"/ui/account?error={quote(detail)}")
 
 
 @router.get("/ui/partials/stats", response_class=HTMLResponse)
@@ -116,7 +119,7 @@ def partial_stats(request: Request, state: AppState = Depends(get_state)):
     return templates.TemplateResponse(
         request,
         "partials/stats_cards.html",
-        {"stats": stats},
+        template_context(request, stats=stats),
     )
 
 
@@ -166,21 +169,23 @@ def _render(request: Request, state: AppState, template: str, page: str):
         success = "Digest emailed."
     with state.session_factory() as session:
         ops = load_ops_alerts(session)
-    ctx = {
-        "version": __version__,
-        "page": page,
-        "stats": stats,
-        "smtp_port": cfg.smtp.port,
-        "backend_label": stats.backend_name,
-        "backend_ok": stats.backend_connected,
-        "ews_ok": stats.backend_connected,
-        "help_url": help_url(),
-        "must_change_password": bool(_session_data(request).get("must_change_password")),
-        "capacity": _capacity(state),
-        "ops_alerts": ops,
-        "error": request.query_params.get("error"),
-        "success": success,
-    }
+    ctx = template_context(
+        request,
+        version=__version__,
+        page=page,
+        stats=stats,
+        smtp_port=cfg.smtp.port,
+        backend_label=stats.backend_name,
+        backend_ok=stats.backend_connected,
+        ews_ok=stats.backend_connected,
+        help_url=help_url(),
+        external_help_url=external_help_url(),
+        must_change_password=bool(_session_data(request).get("must_change_password")),
+        capacity=_capacity(state),
+        ops_alerts=ops,
+        error=request.query_params.get("error"),
+        success=success,
+    )
     if page == "Settings":
         ctx["config_json"] = redact_config(cfg).model_dump_json()
     return templates.TemplateResponse(request, template, ctx)

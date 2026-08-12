@@ -8,8 +8,10 @@ from starlette.responses import JSONResponse, RedirectResponse, Response
 
 from msgate.auth.admin import ADMIN_USERNAME, admin_exists
 from msgate.auth.session import COOKIE_NAME, MAX_AGE, decode_session, encode_session, session_key
+from msgate.http.root_path import cookie_path, join_root
 
 PUBLIC_PATHS = frozenset({"/healthz", "/readyz", "/metrics"})
+DOCS_PATHS = frozenset({"/docs", "/redoc", "/openapi.json"})
 SETUP_PATH = "/ui/setup"
 LOGIN_PATH = "/ui/login"
 CHANGE_PATH = "/ui/change-password"
@@ -30,41 +32,41 @@ def _is_htmx(request: Request) -> bool:
     return request.headers.get("HX-Request", "").lower() == "true"
 
 
-def _redirect(url: str) -> RedirectResponse:
-    resp = RedirectResponse(url=url, status_code=303)
+def _redirect(request: Request, url: str) -> RedirectResponse:
+    resp = RedirectResponse(url=join_root(request, url), status_code=303)
     resp.headers["Cache-Control"] = "no-store"
     return resp
 
 
-def _htmx_redirect(url: str, *, status_code: int = 401) -> Response:
+def _htmx_redirect(request: Request, url: str, *, status_code: int = 401) -> Response:
     """Force a full-page navigation — do not swap login HTML into an HTMX target."""
     return Response(
         status_code=status_code,
-        headers={"HX-Redirect": url, "Cache-Control": "no-store"},
+        headers={"HX-Redirect": join_root(request, url), "Cache-Control": "no-store"},
     )
 
 
 def _unauthorized(request: Request) -> Response:
     if _is_htmx(request):
-        return _htmx_redirect(LOGIN_PATH, status_code=401)
+        return _htmx_redirect(request, LOGIN_PATH, status_code=401)
     if _wants_html(request):
-        return _redirect(LOGIN_PATH)
+        return _redirect(request, LOGIN_PATH)
     return JSONResponse({"detail": "Not authenticated"}, status_code=401)
 
 
 def _forbidden_change(request: Request) -> Response:
     if _is_htmx(request):
-        return _htmx_redirect(CHANGE_PATH, status_code=403)
+        return _htmx_redirect(request, CHANGE_PATH, status_code=403)
     if _wants_html(request):
-        return _redirect(CHANGE_PATH)
+        return _redirect(request, CHANGE_PATH)
     return JSONResponse({"detail": "Password change required"}, status_code=403)
 
 
 def _need_setup(request: Request) -> Response:
     if _is_htmx(request):
-        return _htmx_redirect(SETUP_PATH, status_code=401)
+        return _htmx_redirect(request, SETUP_PATH, status_code=401)
     if _wants_html(request):
-        return _redirect(SETUP_PATH)
+        return _redirect(request, SETUP_PATH)
     return JSONResponse({"detail": "Admin setup required"}, status_code=401)
 
 
@@ -79,8 +81,9 @@ def load_session(request: Request) -> dict:
 
 
 def save_session(response: Response, request: Request, session: dict) -> None:
+    path = cookie_path(request)
     if not session:
-        response.delete_cookie(COOKIE_NAME, path="/")
+        response.delete_cookie(COOKIE_NAME, path=path)
         return
     state = request.app.state.msgate
     key = session_key(state)
@@ -90,7 +93,7 @@ def save_session(response: Response, request: Request, session: dict) -> None:
         max_age=MAX_AGE,
         httponly=True,
         samesite="lax",
-        path="/",
+        path=path,
     )
 
 
@@ -126,12 +129,16 @@ class AuthMiddleware(BaseHTTPMiddleware):
         must_change = bool(session_data.get("must_change_password"))
 
         if path == SETUP_PATH or path.startswith(f"{AUTH_PREFIX}/setup"):
-            return _redirect(LOGIN_PATH)
+            return _redirect(request, LOGIN_PATH)
 
         if not logged_in:
             if path == LOGIN_PATH or path.startswith(f"{AUTH_PREFIX}/login"):
                 return await call_next(request)
             return _unauthorized(request)
+
+        if path in DOCS_PATHS:
+            request.state.msgate_session = session_data
+            return await call_next(request)
 
         if must_change:
             allowed = {

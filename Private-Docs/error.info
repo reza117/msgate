@@ -1,50 +1,93 @@
-.venv/bin/pytest -q
-........................................................................ [ 79%]
-...................                                                      [100%]
-=============================== warnings summary ===============================
-.venv/lib/python3.12/site-packages/fastapi/testclient.py:1
-  /home/reza/Projects/git/Reza-Projects/davmail/msgate/.venv/lib/python3.12/site-packages/fastapi/testclient.py:1: StarletteDeprecationWarning: Using `httpx` with `starlette.testclient` is deprecated; install `httpx2` instead.
-    from starlette.testclient import TestClient as TestClient  # noqa
+sudo tail -50 /var/lib/msgate/logs/msgate-$(date +%Y%m%d).log
+2026-08-12T11:38:13 INFO [msgate.cli] file logging enabled path=/var/lib/msgate/logs/msgate-20260812.log
+2026-08-12T11:38:15 INFO [msgate.cli] API/UI listening on http://0.0.0.0:8080
+2026-08-12T11:38:15 WARNING [msgate.cli] EWS not configured yet — API/UI will start; set Exchange settings in the Web UI (Settings) or MSGATE_EWS_* env on first boot
+2026-08-12T11:38:15 INFO [msgate.queue.worker] queue workers started count=2 interval=2.0s
+2026-08-12T11:38:15 INFO [msgate.ops.watcher] capacity watcher started interval=30.0s
+2026-08-12T11:38:15 INFO [msgate.ops.digest_scheduler] digest scheduler started interval=60.0s
+2026-08-12T11:38:15 INFO [msgate.smtp.server] SMTP controller ready bind=127.0.0.1 port=1025 allowed_ips=['127.0.0.1']
+2026-08-12T11:38:15 INFO [msgate.cli] msgate 0.0.20 smtp://127.0.0.1:1025 api://0.0.0.0:8080 (Ctrl+C to stop)
+2026-08-12T11:38:15 WARNING [msgate.cli] No admin account — open http://0.0.0.0:8080/ to create password
+2026-08-12T11:44:04 INFO [msgate.queue.worker] queue workers stopped
+2026-08-12T11:44:04 INFO [msgate.ops.watcher] capacity watcher stopped
+2026-08-12T11:44:04 INFO [msgate.ops.digest_scheduler] digest scheduler stopped
+2026-08-12T11:44:04 INFO [msgate.cli] msgate stopped
+2026-08-12T11:44:06 INFO [msgate.cli] file logging enabled path=/var/lib/msgate/logs/msgate-20260812.log
+2026-08-12T11:44:07 INFO [msgate.cli] API/UI listening on http://0.0.0.0:80
+2026-08-12T11:44:07 WARNING [msgate.cli] EWS not configured yet — API/UI will start; set Exchange settings in the Web UI (Settings) or MSGATE_EWS_* env on first boot
+2026-08-12T11:44:07 INFO [msgate.queue.worker] queue workers started count=2 interval=2.0s
+2026-08-12T11:44:07 INFO [msgate.ops.watcher] capacity watcher started interval=30.0s
+2026-08-12T11:44:07 INFO [msgate.ops.digest_scheduler] digest scheduler started interval=60.0s
+2026-08-12T11:44:07 INFO [msgate.smtp.server] SMTP controller ready bind=127.0.0.1 port=1025 allowed_ips=['127.0.0.1']
+2026-08-12T11:44:07 INFO [msgate.cli] msgate 0.0.20 smtp://127.0.0.1:1025 api://0.0.0.0:80 (Ctrl+C to stop)
+2026-08-12T11:44:07 WARNING [msgate.cli] No admin account — open http://0.0.0.0:80/ to create password
+2026-08-12T12:00:20 INFO [msgate.queue.worker] queue workers stopped
+2026-08-12T12:00:20 INFO [msgate.ops.watcher] capacity watcher stopped
+2026-08-12T12:00:20 INFO [msgate.ops.digest_scheduler] digest scheduler stopped
+2026-08-12T12:00:20 INFO [msgate.cli] msgate stopped
+2026-08-12T12:00:22 INFO [msgate.cli] file logging enabled path=/var/lib/msgate/logs/msgate-20260812.log
+2026-08-12T12:00:22 INFO [msgate.cli] API/UI listening on http://0.0.0.0:8080
+2026-08-12T12:00:22 WARNING [msgate.cli] EWS not configured yet — API/UI will start; set Exchange settings in the Web UI (Settings) or MSGATE_EWS_* env on first boot
+2026-08-12T12:00:22 INFO [msgate.queue.worker] queue workers started count=2 interval=2.0s
+2026-08-12T12:00:22 INFO [msgate.ops.watcher] capacity watcher started interval=30.0s
+2026-08-12T12:00:22 INFO [msgate.ops.digest_scheduler] digest scheduler started interval=60.0s
+2026-08-12T12:00:22 INFO [msgate.smtp.server] SMTP controller ready bind=127.0.0.1 port=1025 allowed_ips=['127.0.0.1']
+2026-08-12T12:00:22 INFO [msgate.cli] msgate 0.0.20 smtp://127.0.0.1:1025 api://0.0.0.0:8080 (Ctrl+C to stop)
+2026-08-12T12:00:22 WARNING [msgate.cli] No admin account — open http://0.0.0.0:8080/ to create password
 
-tests/test_api.py: 2 warnings
-tests/test_auth.py: 13 warnings
-tests/test_digests.py: 1 warning
-tests/test_logs_ui.py: 3 warnings
-tests/test_observability.py: 2 warnings
-tests/test_settings_ui.py: 4 warnings
-tests/test_ui.py: 1 warning
-  /home/reza/Projects/git/Reza-Projects/davmail/msgate/src/msgate/tls/context.py:28: DeprecationWarning: ssl.TLSVersion.TLSv1_1 is deprecated
-    ctx.minimum_version = _TLS_VERSION[profile.min_tls]
-
-tests/test_api.py: 2 warnings
-tests/test_auth.py: 13 warnings
-tests/test_digests.py: 1 warning
-tests/test_logs_ui.py: 3 warnings
-tests/test_observability.py: 2 warnings
-tests/test_settings_ui.py: 4 warnings
-tests/test_ui.py: 1 warning
-  /home/reza/Projects/git/Reza-Projects/davmail/msgate/src/msgate/tls/context.py:30: DeprecationWarning: ssl.TLSVersion.TLSv1_1 is deprecated
-    ctx.maximum_version = _TLS_VERSION[profile.max_tls]
-
-tests/test_api.py: 2 warnings
-tests/test_auth.py: 13 warnings
-tests/test_digests.py: 1 warning
-tests/test_logs_ui.py: 3 warnings
-tests/test_observability.py: 2 warnings
-tests/test_settings_ui.py: 4 warnings
-tests/test_ui.py: 1 warning
-  /home/reza/Projects/git/Reza-Projects/davmail/msgate/src/msgate/tls/context.py:28: DeprecationWarning: ssl.TLSVersion.TLSv1 is deprecated
-    ctx.minimum_version = _TLS_VERSION[profile.min_tls]
-
-tests/test_api.py: 2 warnings
-tests/test_auth.py: 13 warnings
-tests/test_digests.py: 1 warning
-tests/test_logs_ui.py: 3 warnings
-tests/test_observability.py: 2 warnings
-tests/test_settings_ui.py: 4 warnings
-tests/test_ui.py: 1 warning
-  /home/reza/Projects/git/Reza-Projects/davmail/msgate/src/msgate/tls/context.py:30: DeprecationWarning: ssl.TLSVersion.TLSv1 is deprecated
-    ctx.maximum_version = _TLS_VERSION[profile.max_tls]
-
--- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
-91 passed, 105 warnings in 4.27s
+##############################################
+sudo journalctl -u msgate -n 50 --no-pager
+-- Logs begin at Wed 2022-07-27 13:51:04 CEST, end at Wed 2026-08-12 12:36:32 CEST. --
+Aug 12 12:00:20 dc5-pdu-server msgate[2997909]: 2026-08-12T12:00:20 INFO [msgate.queue.worker] queue workers stopped
+Aug 12 12:00:20 dc5-pdu-server msgate[2997909]: 2026-08-12T12:00:20 INFO [msgate.ops.watcher] capacity watcher stopped
+Aug 12 12:00:20 dc5-pdu-server msgate[2997909]: 2026-08-12T12:00:20 INFO [msgate.ops.digest_scheduler] digest scheduler stopped
+Aug 12 12:00:20 dc5-pdu-server msgate[2997909]: 2026-08-12T12:00:20 INFO [msgate.cli] msgate stopped
+Aug 12 12:00:21 dc5-pdu-server systemd[1]: msgate.service: Succeeded.
+Aug 12 12:00:21 dc5-pdu-server systemd[1]: Stopped msgate SMTP gateway.
+Aug 12 12:00:21 dc5-pdu-server systemd[1]: Started msgate SMTP gateway.
+Aug 12 12:00:22 dc5-pdu-server msgate[2998947]: 2026-08-12T12:00:22 INFO [msgate.cli] file logging enabled path=/var/lib/msgate/logs/msgate-20260812.log
+Aug 12 12:00:22 dc5-pdu-server msgate[2998947]: INFO  [alembic.runtime.migration] Context impl SQLiteImpl.
+Aug 12 12:00:22 dc5-pdu-server msgate[2998947]: INFO  [alembic.runtime.migration] Will assume non-transactional DDL.
+Aug 12 12:00:22 dc5-pdu-server msgate[2998947]: 2026-08-12T12:00:22 INFO [msgate.cli] API/UI listening on http://0.0.0.0:8080
+Aug 12 12:00:22 dc5-pdu-server msgate[2998947]: 2026-08-12T12:00:22 WARNING [msgate.cli] EWS not configured yet — API/UI will start; set Exchange settings in the Web UI (Settings) or MSGATE_EWS_* env on first boot
+Aug 12 12:00:22 dc5-pdu-server msgate[2998947]: 2026-08-12T12:00:22 INFO [msgate.queue.worker] queue workers started count=2 interval=2.0s
+Aug 12 12:00:22 dc5-pdu-server msgate[2998947]: 2026-08-12T12:00:22 INFO [msgate.ops.watcher] capacity watcher started interval=30.0s
+Aug 12 12:00:22 dc5-pdu-server msgate[2998947]: 2026-08-12T12:00:22 INFO [msgate.ops.digest_scheduler] digest scheduler started interval=60.0s
+Aug 12 12:00:22 dc5-pdu-server msgate[2998947]: 2026-08-12T12:00:22 INFO [msgate.smtp.server] SMTP controller ready bind=127.0.0.1 port=1025 allowed_ips=['127.0.0.1']
+Aug 12 12:00:22 dc5-pdu-server msgate[2998947]: 2026-08-12T12:00:22 INFO [msgate.cli] msgate 0.0.20 smtp://127.0.0.1:1025 api://0.0.0.0:8080 (Ctrl+C to stop)
+Aug 12 12:00:22 dc5-pdu-server msgate[2998947]:  msgate: Exchange not configured — open http://0.0.0.0:8080/ui/settings
+Aug 12 12:00:22 dc5-pdu-server msgate[2998947]: ═══════════════════════════════════════════════════════
+Aug 12 12:00:22 dc5-pdu-server msgate[2998947]:  msgate: No admin account yet.
+Aug 12 12:00:22 dc5-pdu-server msgate[2998947]:  Open http://0.0.0.0:8080/ in your browser to set your password.
+Aug 12 12:00:22 dc5-pdu-server msgate[2998947]: ═══════════════════════════════════════════════════════
+Aug 12 12:00:22 dc5-pdu-server msgate[2998947]: 2026-08-12T12:00:22 WARNING [msgate.cli] No admin account — open http://0.0.0.0:8080/ to create password
+Aug 12 12:00:22 dc5-pdu-server msgate[2998947]: INFO:     Started server process [2998947]
+Aug 12 12:00:22 dc5-pdu-server msgate[2998947]: INFO:     Waiting for application startup.
+Aug 12 12:00:22 dc5-pdu-server msgate[2998947]: INFO:     Application startup complete.
+Aug 12 12:00:22 dc5-pdu-server msgate[2998947]: INFO:     Uvicorn running on http://0.0.0.0:8080 (Press CTRL+C to quit)
+Aug 12 12:01:06 dc5-pdu-server msgate[2998947]: INFO:     127.0.0.1:0 - "HEAD / HTTP/1.1" 303 See Other
+Aug 12 12:04:03 dc5-pdu-server msgate[2998947]: INFO:     127.0.0.1:0 - "HEAD / HTTP/1.1" 303 See Other
+Aug 12 12:11:36 dc5-pdu-server msgate[2998947]: INFO:     172.19.7.1:0 - "HEAD / HTTP/1.1" 303 See Other
+Aug 12 12:13:11 dc5-pdu-server msgate[2998947]: INFO:     172.19.7.1:0 - "HEAD / HTTP/1.1" 303 See Other
+Aug 12 12:13:44 dc5-pdu-server msgate[2998947]: INFO:     172.19.7.1:0 - "HEAD / HTTP/1.1" 303 See Other
+Aug 12 12:13:44 dc5-pdu-server msgate[2998947]: INFO:     172.19.7.1:0 - "HEAD /ui/setup HTTP/1.1" 405 Method Not Allowed
+Aug 12 12:14:07 dc5-pdu-server msgate[2998947]: INFO:     172.19.7.1:0 - "GET / HTTP/1.1" 303 See Other
+Aug 12 12:14:07 dc5-pdu-server msgate[2998947]: INFO:     172.19.7.1:0 - "GET /ui/setup HTTP/1.1" 200 OK
+Aug 12 12:15:47 dc5-pdu-server msgate[2998947]: INFO:     172.19.7.1:0 - "GET / HTTP/1.1" 303 See Other
+Aug 12 12:15:47 dc5-pdu-server msgate[2998947]: INFO:     172.19.7.1:0 - "GET /ui/setup HTTP/1.1" 200 OK
+Aug 12 12:17:31 dc5-pdu-server msgate[2998947]: INFO:     10.10.12.22:0 - "GET / HTTP/1.1" 303 See Other
+Aug 12 12:19:41 dc5-pdu-server msgate[2998947]: INFO:     10.10.12.22:0 - "GET //setup HTTP/1.1" 303 See Other
+Aug 12 12:21:10 dc5-pdu-server msgate[2998947]: INFO:     10.10.12.22:0 - "GET / HTTP/1.1" 303 See Other
+Aug 12 12:21:22 dc5-pdu-server msgate[2998947]: INFO:     10.10.12.22:0 - "GET / HTTP/1.1" 303 See Other
+Aug 12 12:23:10 dc5-pdu-server msgate[2998947]: INFO:     10.10.12.22:0 - "GET / HTTP/1.1" 303 See Other
+Aug 12 12:23:10 dc5-pdu-server msgate[2998947]: INFO:     10.10.12.22:0 - "GET /ui/setup HTTP/1.1" 200 OK
+Aug 12 12:23:41 dc5-pdu-server msgate[2998947]: INFO:     10.10.12.22:0 - "POST /ui/auth/setup HTTP/1.1" 303 See Other
+Aug 12 12:23:41 dc5-pdu-server msgate[2998947]: INFO:     10.10.12.22:0 - "GET / HTTP/1.1" 200 OK
+Aug 12 12:23:48 dc5-pdu-server msgate[2998947]: INFO:     10.10.12.22:0 - "GET /ui/account HTTP/1.1" 200 OK
+Aug 12 12:27:09 dc5-pdu-server msgate[2998947]: INFO:     10.10.12.22:0 - "GET /docs HTTP/1.1" 200 OK
+Aug 12 12:27:45 dc5-pdu-server msgate[2998947]: INFO:     10.10.12.22:0 - "GET / HTTP/1.1" 200 OK
+Aug 12 12:31:01 dc5-pdu-server msgate[2998947]: INFO:     10.10.12.22:0 - "GET /ui/account HTTP/1.1" 200 OK
+Aug 12 12:31:08 dc5-pdu-server msgate[2998947]: INFO:     10.10.12.22:0 - "GET /ui/settings HTTP/1.1" 200 OK
+################################
+ sudo tail -30 /var/log/nginx/error.log
+tail: cannot open '/var/log/nginx/error.log' for reading: No such file or directory

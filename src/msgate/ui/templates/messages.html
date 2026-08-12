@@ -2,7 +2,7 @@
 {% block content %}
 <section class="bg-slate-900 border border-slate-800 rounded-lg p-4">
   <h2 class="text-sm font-medium text-slate-400 mb-3">Message Log</h2>
-  <div id="msg-table" hx-get="/ui/partials/message-table" hx-trigger="load, every 5s" hx-swap="innerHTML">
+  <div id="msg-table" hx-get="{{ rp('/ui/partials/message-table') }}" hx-trigger="load, every 5s" hx-swap="innerHTML">
     Loading…
   </div>
 </section>

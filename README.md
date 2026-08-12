@@ -73,6 +73,14 @@ sudo systemctl start msgate
 
 Open `http://<server-ip>:8080/` — set the admin password, then **Settings → Exchange**.
 
+**Behind a reverse proxy** (e.g. `https://host/msgate/` → port 8080), set in `/opt/msgate/msgate.env`:
+
+```bash
+MSGATE_ROOT_PATH=/msgate
+```
+
+Then `sudo systemctl restart msgate`. All UI links and API calls will use the `/msgate` prefix.
+
 ### Upgrade (keep data)
 
 ```bash
@@ -144,5 +152,5 @@ curl -k -I "https://<host>/EWS/Exchange.asmx"
 
 ## Docs
 
-- Public (GitHub Pages): [`docs/`](docs/) → [msgate.github.io/msgate](https://msgate.github.io/msgate/)
-- In-app: sidebar **Help ↗** (`MSGATE_HELP_URL`)
+- Public docs: [`docs/`](docs/) on GitHub → [github.com/reza117/msgate/tree/main/docs](https://github.com/reza117/msgate/tree/main/docs)
+- In-app: sidebar **Help ↗** → `/ui/help` (works behind proxy subpath)

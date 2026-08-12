@@ -1,6 +1,6 @@
 {% extends "base.html" %}
 {% block content %}
-<div id="stats-cards" hx-get="/ui/partials/stats" hx-trigger="load, every 10s" hx-swap="innerHTML">
+<div id="stats-cards" hx-get="{{ rp('/ui/partials/stats') }}" hx-trigger="load, every 10s" hx-swap="innerHTML">
   {% include "partials/stats_cards.html" %}
 </div>
 
@@ -12,10 +12,10 @@
   <section class="bg-slate-900 border border-slate-800 rounded-lg p-4">
     <h2 class="text-sm font-medium text-slate-400 mb-3">Quick Actions</h2>
     <div class="space-y-3 text-sm">
-      <a href="/ui/settings" class="block px-4 py-3 rounded bg-slate-800 hover:bg-slate-700">Settings</a>
-      <a href="/ui/tools" class="block px-4 py-3 rounded bg-slate-800 hover:bg-slate-700">Send test email</a>
-      <a href="/ui/tools#auth" class="block px-4 py-3 rounded bg-slate-800 hover:bg-slate-700">Auth simulator</a>
-      <button hx-post="/api/v1/tools/ews-health" hx-swap="none"
+      <a href="{{ rp('/ui/settings') }}" class="block px-4 py-3 rounded bg-slate-800 hover:bg-slate-700">Settings</a>
+      <a href="{{ rp('/ui/tools') }}" class="block px-4 py-3 rounded bg-slate-800 hover:bg-slate-700">Send test email</a>
+      <a href="{{ rp('/ui/tools') }}#auth" class="block px-4 py-3 rounded bg-slate-800 hover:bg-slate-700">Auth simulator</a>
+      <button hx-post="{{ rp('/api/v1/tools/ews-health') }}" hx-swap="none"
               onclick="alert('Check live traffic panel for EWS health result')"
               class="w-full text-left px-4 py-3 rounded bg-slate-800 hover:bg-slate-700">
         Check Exchange health
@@ -29,7 +29,9 @@
 <script>
 (function () {
   const el = document.getElementById('traffic');
-  const ws = new WebSocket(`ws://${location.host}/api/v1/ws/traffic`);
+  const root = window.MSGATE_ROOT || '';
+  const proto = location.protocol === 'https:' ? 'wss:' : 'ws:';
+  const ws = new WebSocket(`${proto}//${location.host}${root}/api/v1/ws/traffic`);
   function line(ev) {
     const d = document.createElement('div');
     let cls = 'traffic-line kind-smtp';

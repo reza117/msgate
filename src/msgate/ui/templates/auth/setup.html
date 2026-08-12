@@ -2,7 +2,7 @@
 {% block content %}
 <h2 class="text-lg font-medium mb-4 text-center">Create administrator password</h2>
 <p class="text-slate-400 text-sm mb-6 text-center">Username: <span class="text-slate-200 font-mono">admin</span></p>
-<form method="post" action="/ui/auth/setup" class="space-y-4">
+<form method="post" action="{{ rp('/ui/auth/setup') }}" class="space-y-4">
   <div>
     <label class="block text-sm text-slate-400 mb-1" for="password">Password</label>
     <input id="password" name="password" type="password" required minlength="8"

@@ -19,7 +19,7 @@
       Critical overload (queue / circuit) can email you via msgate’s Exchange path.
       Thresholds also show as a banner in the UI.
     </p>
-    <form method="post" action="/ui/account/alerts" class="space-y-3 text-sm">
+    <form method="post" action="{{ rp('/ui/account/alerts') }}" class="space-y-3 text-sm">
       <label class="block">
         <span class="text-slate-400">Admin alert email</span>
         <input name="admin_email" type="email" value="{{ ops_alerts.admin_email }}"
@@ -46,7 +46,7 @@
     {% if not ops_alerts.admin_email %}
     <p class="text-xs text-amber-400 mb-3">No admin alert email saved yet — digests cannot send.</p>
     {% endif %}
-    <form method="post" action="/ui/account/digests" class="space-y-3 text-sm">
+    <form method="post" action="{{ rp('/ui/account/digests') }}" class="space-y-3 text-sm">
       <label class="inline-flex items-center gap-2 text-slate-300">
         <input type="checkbox" name="digest_daily_enabled" value="1"
                {% if ops_alerts.digest_daily_enabled %}checked{% endif %}>
@@ -85,7 +85,7 @@
       </div>
       <button type="submit" class="block px-4 py-2 rounded bg-slate-700 hover:bg-slate-600">Save digests</button>
     </form>
-    <form method="post" action="/ui/account/digests/send" class="mt-3">
+    <form method="post" action="{{ rp('/ui/account/digests/send') }}" class="mt-3">
       <button type="submit" class="px-4 py-2 rounded bg-blue-600 hover:bg-blue-500 text-sm">
         Send digest now
       </button>
@@ -94,8 +94,8 @@
 
   <section class="bg-slate-900 border border-slate-800 rounded-lg p-4">
     <h2 class="text-sm font-medium text-slate-400 mb-3">Change password</h2>
-    <form method="post" action="/ui/auth/change-password" class="space-y-3 text-sm">
-      <input type="hidden" name="next" value="/ui/account">
+    <form method="post" action="{{ rp('/ui/auth/change-password') }}" class="space-y-3 text-sm">
+      <input type="hidden" name="next" value="{{ rp('/ui/account') }}">
       <label class="block">
         <span class="text-slate-400">Current password</span>
         <input name="current_password" type="password" required autocomplete="current-password"
