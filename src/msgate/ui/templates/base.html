@@ -90,8 +90,9 @@
   <script>
   document.body.addEventListener('htmx:configRequest', (e) => {
     const root = window.MSGATE_ROOT || '';
-    if (root && e.detail.path && e.detail.path.startsWith('/')) {
-      e.detail.path = root + e.detail.path;
+    const path = e.detail.path;
+    if (root && path && path.startsWith('/') && !path.startsWith(root + '/')) {
+      e.detail.path = root + path;
     }
   });
   document.body.addEventListener('htmx:responseError', (evt) => {
