@@ -151,7 +151,7 @@ resolve_tree() {
         fi
         local extract_dir="${TMP_ROOT}/extract"
         mkdir -p "${extract_dir}"
-        echo "==> Extracting ${src}"
+        echo "==> Extracting ${src}" >&2
         tar -xzf "${src}" -C "${extract_dir}"
         local top
         top="$(find "${extract_dir}" -mindepth 1 -maxdepth 1 -type d | head -n 1)"
@@ -171,7 +171,7 @@ resolve_tree() {
         fi
         local extract_dir="${TMP_ROOT}/extract"
         mkdir -p "${extract_dir}"
-        echo "==> Extracting ${src}"
+        echo "==> Extracting ${src}" >&2
         unzip -q "${src}" -d "${extract_dir}"
         local top
         top="$(find "${extract_dir}" -mindepth 1 -maxdepth 1 -type d | head -n 1)"
