@@ -135,15 +135,16 @@ PY
 
 resolve_tree() {
   local src="$1"
+  local path_out="$2"
+  local resolved=""
+
   if [[ -d "${src}" ]]; then
     if [[ ! -f "${src}/install.sh" ]]; then
       echo "ERROR: ${src} has no install.sh (not a msgate release tree)" >&2
       exit 1
     fi
-    printf '%s\n' "${src}"
-    return
-  fi
-  if [[ -f "${src}" ]]; then
+    resolved="${src}"
+  elif [[ -f "${src}" ]]; then
     case "${src}" in
       *.tar.gz|*.tgz)
         if [[ -z "${TMP_ROOT}" ]]; then
@@ -156,14 +157,13 @@ resolve_tree() {
         local top
         top="$(find "${extract_dir}" -mindepth 1 -maxdepth 1 -type d | head -n 1)"
         if [[ -n "${top}" && -f "${top}/install.sh" ]]; then
-          printf '%s\n' "${top}"
+          resolved="${top}"
         elif [[ -f "${extract_dir}/install.sh" ]]; then
-          printf '%s\n' "${extract_dir}"
+          resolved="${extract_dir}"
         else
           echo "ERROR: tarball does not contain install.sh" >&2
           exit 1
         fi
-        return
         ;;
       *.zip)
         if [[ -z "${TMP_ROOT}" ]]; then
@@ -176,23 +176,25 @@ resolve_tree() {
         local top
         top="$(find "${extract_dir}" -mindepth 1 -maxdepth 1 -type d | head -n 1)"
         if [[ -n "${top}" && -f "${top}/install.sh" ]]; then
-          printf '%s\n' "${top}"
+          resolved="${top}"
         elif [[ -f "${extract_dir}/install.sh" ]]; then
-          printf '%s\n' "${extract_dir}"
+          resolved="${extract_dir}"
         else
           echo "ERROR: zip does not contain install.sh" >&2
           exit 1
         fi
-        return
         ;;
       *)
         echo "ERROR: unsupported file (want .tar.gz, .zip, or a directory): ${src}" >&2
         exit 1
         ;;
     esac
+  else
+    echo "ERROR: source not found: ${src}" >&2
+    exit 1
   fi
-  echo "ERROR: source not found: ${src}" >&2
-  exit 1
+
+  printf '%s\n' "${resolved}" >"${path_out}"
 }
 
 if [[ "$(id -u)" -ne 0 ]]; then
@@ -257,7 +259,9 @@ case "${MODE}" in
     fi
     echo "==> Downloading"
     download "${URL}" "${archive}"
-    TREE="$(resolve_tree "${archive}")"
+    tree_file="${TMP_ROOT}/tree.path"
+    resolve_tree "${archive}" "${tree_file}"
+    TREE="$(<"${tree_file}")"
     ;;
   url)
     TMP_ROOT="$(mktemp -d /tmp/msgate-update.XXXXXX)"
@@ -268,14 +272,22 @@ case "${MODE}" in
     fi
     echo "==> Downloading ${URL}"
     download "${URL}" "${archive}"
-    TREE="$(resolve_tree "${archive}")"
+    tree_file="${TMP_ROOT}/tree.path"
+    resolve_tree "${archive}" "${tree_file}"
+    TREE="$(<"${tree_file}")"
     ;;
   local)
     SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-    TREE="$(resolve_tree "${SCRIPT_DIR}")"
+    tree_file="$(mktemp /tmp/msgate-tree.XXXXXX)"
+    resolve_tree "${SCRIPT_DIR}" "${tree_file}"
+    TREE="$(<"${tree_file}")"
+    rm -f "${tree_file}"
     ;;
   path)
-    TREE="$(resolve_tree "${SOURCE}")"
+    tree_file="$(mktemp /tmp/msgate-tree.XXXXXX)"
+    resolve_tree "${SOURCE}" "${tree_file}"
+    TREE="$(<"${tree_file}")"
+    rm -f "${tree_file}"
     ;;
   *)
     echo "ERROR: internal mode=${MODE}" >&2
